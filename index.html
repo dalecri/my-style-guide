@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Quiet Pixel</title>
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap');
+
+  :root {
+    --void: #F7F5FA;
+    --surface: #FFFFFF;
+    --surface-2: #EEE9F5;
+    --text: #241E2E;
+    --muted: #6E6480;
+    --line: #E1DAEC;
+    --moon: #7A66A6;
+    --lamp: #D9772E;
+    --dawn: #3C7FA6;
+    --sun: #C99A2E;
+    --ring: rgba(122,102,166,0.16);
+    --ease: cubic-bezier(.4,0,.2,1);
+    /* --accent / --accent-ring are the LIVE swappable accent, driven by the global picker below.
+       Everything that used to hardcode --moon now reads --accent instead, so the whole guide retints at once. */
+    --accent: var(--moon);
+    --accent-ring: var(--ring);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --void: #1E1826; --surface: #2A2233; --surface-2: #251F2D;
+      --text: #EDE7F2; --muted: #9B8FA8; --line: #3D3448;
+      --moon: #B9A9D9; --lamp: #E8873A; --dawn: #7FB8D9; --sun: #F2C94C;
+      --ring: rgba(185,169,217,0.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --void: #1E1826; --surface: #2A2233; --surface-2: #251F2D;
+    --text: #EDE7F2; --muted: #9B8FA8; --line: #3D3448;
+    --moon: #B9A9D9; --lamp: #E8873A; --dawn: #7FB8D9; --sun: #F2C94C;
+    --ring: rgba(185,169,217,0.14);
+  }
+
+  /* --- page-wide theme worlds ---
+     Each accent isn't just a button color — it owns its own neutral ramp, derived from
+     (not replacing) the primary Void/Surface/Muted/Line palette. Moon is the home-base
+     dark-purple world; Lamp and Dawn re-tint the SAME roles toward their own hue family
+     so picking one changes the whole page, not just controls.
+     Specificity note: :root:not([data-theme="light"]) above is (0,2,0), so a plain
+     html[data-page-theme] rule (0,1,1) would lose to it even though it comes later in
+     source order. Every rule here is written as :root[data-page-theme="…"] to match
+     that specificity and win by source order instead. */
+  :root[data-page-theme="lamp"] {
+    --void: #1F150E !important; --surface: #2A1E14 !important; --surface-2: #251A11 !important;
+    --text: #F2E6D6 !important; --muted: #B99B7C !important; --line: #4A3521 !important;
+    --ring: rgba(232,135,58,0.16) !important;
+  }
+  :root[data-page-theme="dawn"] {
+    --void: #E9F1F6 !important; --surface: #FFFFFF !important; --surface-2: #DCEAF2 !important;
+    --text: #1E3A4A !important; --muted: #5A7E8F !important; --line: #C3DBE6 !important;
+    --ring: rgba(60,127,166,0.14) !important;
+  }
+  :root[data-page-theme="sun"] {
+    --void: #F4EDDB !important; --surface: #FFFBF0 !important; --surface-2: #ECE1C4 !important;
+    --text: #3A3226 !important; --muted: #8A7A56 !important; --line: #DCCB9C !important;
+    --ring: rgba(201,154,46,0.18) !important;
+  }
+  /* explicit moon theme (vs. the untagged default above) so all three are selectable as equals */
+  :root[data-page-theme="moon"] {
+    --void: #1E1826 !important; --surface: #2A2233 !important; --surface-2: #251F2D !important;
+    --text: #EDE7F2 !important; --muted: #9B8FA8 !important; --line: #3D3448 !important;
+    --ring: rgba(185,169,217,0.14) !important;
+  }
+
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Mono', ui-monospace, monospace;
+    margin: 0;
+    padding: 0 20px;
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.4s var(--ease), color 0.4s var(--ease);
+  }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding-block: 56px 100px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; font-family: 'Space Mono', monospace; }
+
+  /* nav */
+  .toc {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--void);
+    border-bottom: 1px solid var(--line);
+    margin: 0 -20px 0;
+    padding: 12px 20px;
+    display: flex; gap: 4px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+  }
+  /* accent-bar sticks directly under the toc — 45px matches toc's rendered height (12px*2 padding + ~21px line-height) */
+  .toc::-webkit-scrollbar { display: none; }
+  .toc a {
+    flex-shrink: 0; font-size: 11px; color: var(--muted); text-decoration: none;
+    padding: 7px 12px; border-radius: 999px; white-space: nowrap;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .toc a:hover { background: var(--surface-2); color: var(--text); }
+
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase;
+    display: flex; align-items: center; gap: 10px; margin: 40px 0 22px;
+    transition: color 0.4s var(--ease);
+  }
+  .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px 2px var(--accent-ring); animation: pulse-dot 2.4s ease-in-out infinite; transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease); }
+  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.45;} }
+
+  h1 { font-size: clamp(28px, 5.5vw, 40px); font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  .dek { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 54ch; margin-top: 16px; }
+
+  section { margin-top: 76px; scroll-margin-top: 60px; }
+  .section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 22px; }
+  .section-num { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+  h2 { font-size: 18px; font-weight: 700; }
+  .section-note { font-size: 13px; color: var(--muted); line-height: 1.7; margin: -6px 0 22px; max-width: 58ch; }
+
+  .panel {
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 1px 0 var(--line), 0 8px 24px -18px rgba(0,0,0,0.4);
+    transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease);
+  }
+
+  /* palette */
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 10px; }
+  .swatch { padding: 0; overflow: hidden; }
+  .swatch-fill { height: 68px; transition: background 0.4s var(--ease), border-color 0.4s var(--ease); }
+  .swatch-info { padding: 11px 13px 13px; }
+  .swatch-name { font-size: 13.5px; font-weight: 700; }
+  .swatch-role { font-size: 10px; color: var(--muted); margin: 3px 0 6px; }
+  .swatch-hex { font-size: 10px; color: var(--muted); background: var(--surface-2); display: inline-block; padding: 2px 7px; border-radius: 6px; }
+  .accent-note { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .swatch.pickable { cursor: pointer; position: relative; border: 2px solid transparent; transition: border-color 0.2s var(--ease), transform 0.12s var(--ease); }
+  .swatch.pickable:active { transform: scale(0.98); }
+  .swatch.pickable.is-accent { border-color: var(--text); }
+  .swatch.pickable.is-accent .swatch-info::after { content: "● applied to page"; font-size: 9px; color: var(--text); display: block; margin-top: 4px; }
+
+  /* --- global accent switcher --- */
+  .accent-bar {
+    position: sticky; top: 45px; z-index: 19;
+    background: var(--void); border-bottom: 1px solid var(--line);
+    margin: 0 -20px; padding: 10px 20px;
+    display: flex; align-items: center; gap: 10px; overflow-x: auto;
+    transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+  }
+  .accent-bar-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
+  .accent-swatch {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+    border: 2px solid transparent; padding: 0; transition: transform 0.12s var(--ease), border-color 0.2s var(--ease);
+  }
+  .accent-swatch:active { transform: scale(0.9); }
+  .accent-swatch.active { border-color: var(--text); transform: scale(1.1); }
+  .accent-bar-name { font-size: 11px; color: var(--text); flex-shrink: 0; min-width: 42px; }
+
+  /* type */
+  .type-row { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 20px 22px; flex-wrap: wrap; }
+  .type-row + .type-row { border-top: 1px solid var(--line); }
+  .type-meta { min-width: 120px; }
+  .type-label { font-size: 10px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; transition: color 0.4s var(--ease); }
+  .type-face { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .type-sample { flex: 1; min-width: 200px; }
+  .sample-ui { font-size: 16px; font-weight: 700; }
+  .sample-body { font-size: 13.5px; color: var(--text); line-height: 1.7; }
+  .sample-pixel { font-family: 'Press Start 2P', monospace; font-size: 10.5px; color: var(--lamp); line-height: 1.8; }
+
+  /* --- live theme switcher demo --- */
+  .demo-block { padding: 26px 22px; }
+  .control-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    padding: 8px 16px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
+    font-size: 12px; border: 1px solid transparent; cursor: pointer; font-family: inherit;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.12s var(--ease);
+  }
+  .pill:active { transform: scale(0.96); }
+  .pill.active { background: var(--accent-ring); color: var(--accent-live, var(--accent)); border-color: var(--accent-live, var(--accent)); }
+
+  .theme-preview {
+    margin-top: 18px; border-radius: 14px; padding: 26px 20px; text-align: center;
+    background: var(--tp-bg); color: var(--tp-fg);
+    transition: background 0.4s var(--ease), color 0.4s var(--ease);
+    position: relative; overflow: hidden;
+  }
+  .theme-preview .orb {
+    width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 14px;
+    background: var(--tp-orb); box-shadow: 0 0 30px 6px var(--tp-glow);
+    transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease);
+  }
+  .theme-preview .tp-title { font-size: 13px; font-weight: 700; }
+  .theme-preview .tp-sub { font-size: 10.5px; opacity: 0.7; margin-top: 4px; }
+
+  /* --- capsule toggle (On/Off switch) --- */
+  .qp-toggle {
+    position: relative;
+    display: inline-block;
+    width: 150px;
+    height: 56px;
+    border-radius: 100px;
+    border: 2px solid var(--line);
+    background-color: var(--surface-2);
+    cursor: pointer;
+    outline: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+  }
+  .qp-toggle:hover:not(.qp-toggle--moving) .qp-toggle-knob { background-color: var(--surface); }
+  .qp-toggle:active { transform: scale(0.99); }
+  .qp-toggle-knob {
+    display: flex; align-items: center; justify-content: center;
+    position: absolute; top: 3px; bottom: 3px; left: 3px;
+    width: calc(50% - 3px);
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    font-size: 12px; font-weight: 700;
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    transition: transform 0.4s var(--ease), border-radius 0.4s var(--ease),
+                background-color 0.4s var(--ease), color 0.4s var(--ease),
+                border-color 0.4s var(--ease);
+  }
+  .qp-toggle--on .qp-toggle-knob {
+    border-radius: 50px 6px 6px 50px;
+    color: var(--void);
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .qp-toggle--off .qp-toggle-knob {
+    border-radius: 6px 50px 50px 6px;
+    transform: translateX(100%);
+    color: var(--muted);
+  }
+  .qp-toggle--moving .qp-toggle-knob { transition-timing-function: var(--ease); }
+  .qp-toggle-label { font-size: 11px; color: var(--muted); margin-top: 12px; }
+
+  /* --- slider (Lamplight's pill-track range input) — the default control for any
+     continuous value: reading speed, sizes, volumes. Fill runs from the left edge to
+     the thumb, track and thumb stay soft, no native browser chrome anywhere. */
+  .qp-slider-row { display: flex; flex-direction: column; gap: 8px; }
+  .qp-slider-row + .qp-slider-row { margin-top: 22px; }
+  .qp-slider-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .qp-slider-label { font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+  .qp-slider-value {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; transition: color 0.4s var(--ease);
+  }
+  /* thick pill-track slider — the WHOLE bar reads as one chunky rounded capsule.
+     the fill is painted directly on the track as a hard-stop gradient (driven by
+     --qp-fill, set from JS), so it holds a crisp rounded cap at any value with
+     no separate circular knob poking out. the native thumb is kept but made
+     fully transparent/full-height so it still owns drag/focus/keyboard behavior. */
+  .qp-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 22px; border-radius: 999px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--qp-fill, 50%), var(--surface-2) var(--qp-fill, 50%), var(--surface-2) 100%);
+    outline: none; cursor: pointer; margin: 6px 0;
+    transition: background-color 0.4s var(--ease);
+    position: relative;
+  }
+  .qp-slider::-webkit-slider-runnable-track { height: 22px; border-radius: 999px; background: transparent; }
+  .qp-slider::-moz-range-track { height: 22px; border-radius: 999px; background: transparent; }
+  .qp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 22px; height: 22px; border-radius: 999px;
+    background: transparent; border: none; box-shadow: none;
+    cursor: pointer;
+  }
+  .qp-slider::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 999px;
+    background: transparent; border: none; box-shadow: none;
+    cursor: pointer;
+  }
+  .qp-slider:focus-visible { box-shadow: 0 0 0 4px var(--accent-ring); }
+
+  /* stepped variant — small tick dots under the track marking each stop, for discrete
+     values like text-size steps (Lamplight's customize sheet uses this for font size) */
+  .qp-slider-ticks { display: flex; justify-content: space-between; padding: 0 2px; margin-top: -2px; }
+  .qp-tick { width: 4px; height: 4px; border-radius: 50%; background: var(--line); transition: background 0.4s var(--ease); }
+  .qp-tick.is-past { background: var(--accent); }
+
+  /* --- neumorphic input + todo list ---
+     soft-pressed input on a void-colored inset, rows that read as gently raised
+     tiles. shadows are derived from --line (dark side) and a white-mix of
+     --surface (light side) rather than hardcoded black/white, so the same
+     rules stay soft and correct in both light and dark mode and across all
+     four page-wide themes. */
+  .qp-todo-wrap { --qp-dark: color-mix(in srgb, var(--line) 70%, transparent); --qp-light: color-mix(in srgb, white 55%, transparent); }
+  :root[data-theme="dark"] .qp-todo-wrap { --qp-light: color-mix(in srgb, white 6%, transparent); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .qp-todo-wrap { --qp-light: color-mix(in srgb, white 6%, transparent); }
+  }
+
+  .qp-input-group {
+    position: relative;
+    margin-bottom: 18px;
+    padding: 4px;
+    background: var(--void);
+    border-radius: 14px;
+    box-shadow: inset 5px 5px 10px var(--qp-dark), inset -5px -5px 10px var(--qp-light);
+    transition: box-shadow 0.4s var(--ease), background 0.4s var(--ease);
+  }
+  .qp-input-group input[type="text"] {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 15px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text);
+    outline: none;
+  }
+  .qp-input-group input[type="text"]::placeholder { color: var(--muted); opacity: 0.8; }
+  .qp-input-group:focus-within { box-shadow: inset 5px 5px 10px var(--qp-dark), inset -5px -5px 10px var(--qp-light), 0 0 0 3px var(--accent-ring); }
+
+  .qp-todo-list { list-style: none; display: flex; flex-direction: column; gap: 10px; padding: 0; margin: 0; }
+  .qp-todo-list li {
+    display: flex; align-items: center;
+    padding: 15px 16px;
+    background: var(--void);
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 3px 3px 7px var(--qp-dark), -3px -3px 7px var(--qp-light);
+    transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  }
+  .qp-todo-list li:hover { transform: translateX(3px); box-shadow: 4px 4px 9px var(--qp-dark), -2px -2px 6px var(--qp-light); }
+  .qp-todo-list li::before {
+    content: ""; position: absolute; left: 0; top: 0; height: 100%; width: 3px;
+    background: var(--accent); transform: scaleY(0); transform-origin: center;
+    transition: transform 0.3s var(--ease);
+  }
+  .qp-todo-list li:hover::before { transform: scaleY(1); }
+  .qp-check {
+    width: 18px; height: 18px; border-radius: 6px; margin-right: 16px; flex-shrink: 0;
+    box-shadow: inset 2px 2px 4px var(--qp-dark), inset -1px -1px 2px var(--qp-light);
+    transition: all 0.3s var(--ease); position: relative;
+  }
+  .qp-todo-list li.is-done .qp-check { background: var(--accent); box-shadow: none; }
+  .qp-todo-list li.is-done .qp-check::after {
+    content: ""; position: absolute; top: 50%; left: 50%; width: 5px; height: 5px;
+    background: var(--surface); border-radius: 50%; transform: translate(-50%, -50%);
+  }
+  .qp-todo-text { flex-grow: 1; font-family: 'Space Mono', monospace; font-size: 0.88rem; color: var(--text); transition: all 0.3s var(--ease); }
+  .qp-todo-list li.is-done .qp-todo-text { text-decoration: line-through; opacity: 0.45; }
+  .qp-todo-count { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; display: block; margin-top: 14px; }
+
+  /* --- tilt card (cursor-trap 3D card) --- */
+  .tilt-wrap { display: grid; place-content: center; padding: 40px 20px 46px; }
+  .tilt-scene {
+    --ma: 14deg;         /* max tilt — softened from the original 25deg to stay "quiet" */
+    --oz: 4em;
+    --dz: 2.4em;
+    --fn: var(--ease);   /* system easing, not a bouncy spring */
+    display: grid;
+    overflow: hidden;
+    perspective: 65em;
+    color: var(--text);
+  }
+  .tilt-scene > * { grid-area: 1 / 1; }
+  .tilt-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    z-index: 1;
+  }
+  .tilt-trap { }
+  .tilt-card {
+    --di: calc(2*var(--ti, 3)/6 - 1);
+    --dj: calc(1 - 2*var(--tj, 3)/6);
+    container-type: size;
+    position: relative;
+    width: clamp(200px, 60vmin, 320px);
+    aspect-ratio: 2 / 3;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    transform-origin: 50% 50% var(--oz);
+    transform-style: preserve-3d;
+    transform: rotateX(calc(var(--dj)*var(--ma))) rotateY(calc(var(--di)*var(--ma)));
+    box-shadow: 0 24px 48px -16px rgba(0,0,0,0.35);
+    background:
+      conic-gradient(from 90deg at 1px 1px, transparent 25%, var(--line) 0%) 0 / 1.25em 1.25em,
+      var(--surface);
+    transition: transform 0.4s var(--fn);
+  }
+  .tilt-card::before {
+    content: '';
+    position: absolute; inset: -50%;
+    translate: calc(var(--di, 0)*-40%) calc(var(--dj, 0)*40%);
+    opacity: clamp(0, calc(var(--ti, -1) + 1), 1);
+    background: radial-gradient(65cqw, var(--accent-ring), transparent);
+    transition: translate 0.4s var(--fn), opacity 0.4s var(--fn);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .tilt-text {
+    position: relative; z-index: 2;
+    display: grid; place-content: center; height: 100%;
+    translate: 0 0 var(--dz);
+    text-align: center;
+    padding: 0 20px;
+  }
+  .tilt-text h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .tilt-text p { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin: 0; }
+  .tilt-hint { text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 16px; }
+
+  /* 7x7 hover-trap grid — pure CSS :has(), no JS. Each cell sets --ti/--tj on hover;
+     the card reads those to compute tilt. Generated for N=7 (49 cells: good accuracy, still light DOM). */
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 1):hover) { --ti: 0 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 1):hover) { --tj: 0 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 2):hover) { --ti: 1 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 8):hover) { --tj: 1 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 3):hover) { --ti: 2 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 15):hover) { --tj: 2 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 4):hover) { --ti: 3 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 22):hover) { --tj: 3 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 5):hover) { --ti: 4 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 29):hover) { --tj: 4 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 6):hover) { --ti: 5 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 36):hover) { --tj: 5 }
+  .tilt-scene:has(.tilt-trap:nth-child(7n + 7):hover) { --ti: 6 }
+  .tilt-scene:has(.tilt-trap:nth-child(n + 43):hover) { --tj: 6 }
+
+  /* --- marching ants border (animated dashed outline) --- */
+  .ants {
+    --_ma-color-a: var(--accent);
+    --_ma-color-b: transparent;
+    --_ma-speed: 900ms;              /* slow — quiet, ambient, not urgent */
+    --_ma-direction: 1;
+    --_ma-timing: linear;
+    --_ma-border-width: 1.5px;
+    --_ma-size-a: 6px;
+    --_ma-size-b: 5px;
+    --_ma-angle: 45deg;
+    --_ma-size: calc(var(--_ma-size-a) + var(--_ma-size-b));
+    --_ma-shift: calc(var(--_ma-size) / sin(var(--_ma-angle)));
+    position: relative;
+  }
+  .ants::before, .ants::after {
+    content: '';
+    position: absolute;
+    inset: calc(var(--_ma-border-width) * -1);
+    pointer-events: none;
+    border-radius: inherit;
+    background: repeating-linear-gradient(
+      var(--_ma-angle),
+      var(--_ma-color-a) 0 var(--_ma-size-a),
+      var(--_ma-color-b) var(--_ma-size-a) var(--_ma-size)
+    );
+    background-size: var(--_ma-shift) 100%;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+  }
+  .ants::before {
+    padding: 0 var(--_ma-border-width) var(--_ma-border-width) 0;
+    animation: ants-b var(--_ma-speed) var(--_ma-timing) infinite;
+  }
+  .ants::after {
+    padding: var(--_ma-border-width) 0 0 var(--_ma-border-width);
+    animation: ants-a var(--_ma-speed) var(--_ma-timing) infinite;
+  }
+  .ants:hover::before, .ants:hover::after { animation-play-state: paused; }
+  @keyframes ants-b { to { background-position: calc(var(--_ma-shift) * var(--_ma-direction) * -1) 0; } }
+  @keyframes ants-a { to { background-position: calc(var(--_ma-shift) * var(--_ma-direction)) 0; } }
+
+  /* variant: brighter/faster, reserved for an active or "recording" state — sparingly */
+  .ants--active {
+    --_ma-color-a: var(--accent);
+    --_ma-color-b: var(--surface-2);
+    --_ma-speed: 500ms;
+    --_ma-size-a: 4px;
+    --_ma-size-b: 4px;
+  }
+  /* variant: very quiet, for a drop-target / focus-invite state */
+  .ants--soft {
+    --_ma-color-a: var(--muted);
+    --_ma-color-b: transparent;
+    --_ma-speed: 1400ms;
+    --_ma-border-width: 1px;
+    --_ma-size-a: 5px;
+    --_ma-size-b: 7px;
+  }
+
+  .ants-demo-card {
+    padding: 22px 20px; border-radius: 14px; background: var(--surface-2);
+    font-size: 12px; color: var(--muted); text-align: center;
+  }
+  .ants-demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .ants-demo-label { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .ants-demo-sub { font-size: 10.5px; color: var(--muted); }
+
+  /* --- overlap card (tag/image bleeding into a rounded bottom panel) --- */
+  .oc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .oc-card {
+    border-radius: 18px; overflow: hidden; height: 100%;
+    display: flex; flex-direction: column; justify-content: space-between;
+    --oc-a: var(--surface-2);   /* bottom panel */
+    --oc-b: var(--surface);     /* top panel */
+  }
+  .oc-top {
+    position: relative; z-index: 0;
+    background-color: var(--oc-b);
+    padding: 16px 16px 34px 16px;
+    display: flex; align-items: flex-start;
+  }
+  .oc-bottom {
+    position: relative; z-index: 1;
+    margin-top: -18px;
+    background-color: var(--oc-a);
+    padding: 16px;
+    border-radius: 18px;
+    display: flex; flex-direction: column; gap: 10px;
+    flex-grow: 1;
+  }
+  .oc-card.reverse { flex-direction: column-reverse; }
+  .oc-card.reverse .oc-bottom { margin-top: 0; margin-bottom: -18px; }
+  .oc-card.reverse .oc-top { padding: 34px 16px 16px 16px; align-items: flex-end; }
+  .oc-tag {
+    padding: 5px 12px; border: 1px solid currentColor; border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    position: relative; z-index: 1; color: var(--text);
+  }
+  .oc-title { font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--text); }
+  .oc-text { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+  .oc-card--moon { --oc-a: color-mix(in srgb, var(--moon) 20%, var(--surface)); --oc-b: color-mix(in srgb, var(--dawn) 22%, var(--surface)); }
+  .oc-card--lamp { --oc-a: color-mix(in srgb, var(--lamp) 18%, var(--surface)); --oc-b: color-mix(in srgb, var(--moon) 20%, var(--surface)); }
+  .oc-card--dawn { --oc-a: color-mix(in srgb, var(--dawn) 20%, var(--surface)); --oc-b: color-mix(in srgb, var(--lamp) 16%, var(--surface)); }
+
+  /* --- coverflow carousel (3D card carousel with spring-like motion) --- */
+  .cf-wrap { padding: 8px 20px 30px; display: flex; flex-direction: column; align-items: center; }
+  .cf-stage {
+    width: 100%; max-width: 480px; height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 900px;
+    position: relative;
+  }
+  .cf-track { position: relative; width: 140px; height: 200px; transform-style: preserve-3d; }
+  .cf-slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    cursor: pointer;
+    /* spring-ish easing — snappier at the start, gentle settle, no literal physics engine needed */
+    transition: transform 0.6s cubic-bezier(.22,1.2,.36,1), opacity 0.5s var(--ease);
+    transform-style: preserve-3d;
+  }
+  .cf-cover {
+    width: 100%; aspect-ratio: 3/4; border-radius: 12px;
+    box-shadow: 0 14px 28px -12px rgba(0,0,0,0.35);
+    display: flex; align-items: flex-end; padding: 10px;
+    font-size: 10px; font-weight: 700; color: white;
+  }
+  .cf-caption {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+    transition: opacity 0.4s var(--ease), filter 0.4s var(--ease);
+    filter: blur(2px); opacity: 0;
+  }
+  .cf-slide.is-active .cf-caption { filter: blur(0); opacity: 1; color: var(--text); }
+
+  .cf-controls {
+    margin-top: 18px; display: flex; align-items: center; gap: 14px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--line);
+  }
+  .cf-nav {
+    width: 30px; height: 30px; border-radius: 50%; border: none; background: none;
+    color: var(--muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s var(--ease), transform 0.12s var(--ease);
+  }
+  .cf-nav:hover { color: var(--text); }
+  .cf-nav:active { transform: scale(0.9); }
+  .cf-dots { display: flex; align-items: center; gap: 6px; }
+  .cf-dot {
+    width: 7px; height: 7px; border-radius: 999px; background: var(--line);
+    cursor: pointer; border: none; padding: 0;
+    transition: width 0.3s var(--ease), background 0.3s var(--ease);
+  }
+  .cf-dot.is-active { width: 22px; background: var(--accent); }
+
+  /* transport */
+  .transport { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 22px; }
+  .transport-btn {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px;
+    cursor: pointer; border: none; font-family: inherit;
+    transition: transform 0.12s var(--ease), background 0.2s var(--ease);
+  }
+  .transport-btn:active { transform: scale(0.9); }
+  .transport-btn.main { width: 54px; height: 54px; background: var(--accent); color: var(--void); font-size: 16px; transition: background 0.4s var(--ease), transform 0.12s var(--ease); }
+  .transport-btn.main.playing { animation: soft-breathe 1.6s ease-in-out infinite; }
+  @keyframes soft-breathe { 0%,100%{ box-shadow: 0 0 0 0 var(--accent-ring);} 50%{ box-shadow: 0 0 0 10px transparent;} }
+
+  /* --- RSVP focus-word demo (the signature animation) --- */
+  .rsvp-demo { padding: 30px 20px 26px; text-align: center; }
+  .rsvp-line { font-size: 15px; color: var(--muted); line-height: 1.9; min-height: 1.9em; }
+  .rsvp-word { display: inline-block; transition: none; }
+  .rsvp-word.focus {
+    color: var(--text); font-weight: 700;
+    animation: word-pulse 0.65s var(--ease);
+  }
+  @keyframes word-pulse {
+    0% { opacity: 0.4; transform: scale(1); text-shadow: 0 0 0 transparent; }
+    35% { opacity: 1; transform: scale(1.16); text-shadow: 0 0 18px var(--accent-ring); }
+    100% { opacity: 1; transform: scale(1); text-shadow: 0 0 0 transparent; }
+  }
+  .rsvp-controls { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+  .rsvp-play {
+    padding: 9px 20px; border-radius: 999px; background: var(--accent); color: var(--void);
+    border: none; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: transform 0.12s var(--ease), background 0.4s var(--ease);
+  }
+  .rsvp-play:active { transform: scale(0.96); }
+  .rsvp-speed { font-size: 11px; color: var(--muted); }
+
+  /* --- modal demo --- */
+  .modal-trigger {
+    padding: 10px 18px; border-radius: 999px; background: var(--surface-2); color: var(--text);
+    border: none; font-family: inherit; font-size: 12px; cursor: pointer;
+    transition: transform 0.12s var(--ease), background 0.2s var(--ease);
+  }
+  .modal-trigger:active { transform: scale(0.97); }
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.28s var(--ease);
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  .modal-sheet {
+    background: var(--surface); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+    padding: 24px 22px 28px; transform: translateY(16px); opacity: 0;
+    transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
+  }
+  .modal-backdrop.open .modal-sheet { transform: translateY(0); opacity: 1; }
+  @media (min-width: 640px) {
+    .modal-backdrop { align-items: center; }
+    .modal-sheet { border-radius: 18px; max-width: 380px; }
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; }
+
+  /* principles */
+  .principles { display: flex; flex-direction: column; }
+  .principle { display: grid; grid-template-columns: 22px 1fr; gap: 16px; padding: 18px 22px; }
+  .principle + .principle { border-top: 1px solid var(--line); }
+  .principle-mark { color: var(--accent); font-size: 14px; line-height: 1.5; transition: color 0.4s var(--ease); }
+  .principle-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .principle-body { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  .dd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dd-card { padding: 18px 18px 20px; }
+  .dd-head { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .dd-card.do .dd-head { color: var(--dawn); }
+  .dd-card.dont .dd-head { color: var(--muted); }
+  .dd-card ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.85; color: var(--text); }
+  .dd-card li::marker { color: var(--muted); }
+
+  .spine-row { display: flex; gap: 4px; height: 92px; border-radius: 10px; overflow: hidden; }
+  .spine { flex: 1; display: flex; align-items: flex-end; padding: 12px 8px; font-size: 10px; font-weight: 700; color: white; writing-mode: vertical-rl; }
+  .spine-note { font-size: 11.5px; color: var(--muted); line-height: 1.7; margin-top: 12px; }
+
+  .app-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .app-chip { padding: 8px 14px; background: var(--surface); border-radius: 999px; font-size: 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 0 var(--line); }
+  .app-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* --- responsive breakpoint table + simulator --- */
+  .bp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .bp-table th, .bp-table td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .bp-table th { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .bp-table tr:last-child td { border-bottom: none; }
+  .bp-table td.name { font-weight: 700; }
+
+  .sim-frame-wrap { padding: 20px; }
+  .sim-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .sim-tab {
+    flex: 1; padding: 9px 0; text-align: center; border-radius: 10px; background: var(--surface-2);
+    color: var(--muted); font-size: 11px; cursor: pointer; border: none; font-family: inherit;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .sim-tab.active { background: var(--accent-ring); color: var(--accent); }
+  .sim-viewport-outer { display: flex; justify-content: center; overflow-x: auto; padding: 4px; }
+  .sim-viewport {
+    background: var(--void); border-radius: 18px; border: 1px solid var(--line);
+    padding: 16px; transition: width 0.36s var(--ease), background 0.4s var(--ease);
+    width: 100%;
+  }
+  .sim-viewport[data-w="mobile"] { width: 320px; }
+  .sim-viewport[data-w="tablet"] { width: 520px; }
+  .sim-viewport[data-w="desktop"] { width: 100%; max-width: 680px; }
+  .sim-shelf-row { display: flex; gap: 6px; overflow: hidden; }
+  .sim-book { flex-shrink: 0; height: 76px; border-radius: 6px 6px 0 0; }
+  .sim-viewport[data-w="mobile"] .sim-book { width: 36px; }
+  .sim-viewport[data-w="tablet"] .sim-book { width: 46px; }
+  .sim-viewport[data-w="desktop"] .sim-book { width: 54px; }
+  .sim-controls { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .sim-controls .pill { font-size: 10px; padding: 6px 12px; }
+  .sim-label { font-size: 10px; color: var(--muted); margin-top: 14px; text-align: center; }
+
+  footer { margin-top: 88px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 480px) {
+    .dd-grid { grid-template-columns: 1fr; }
+    .type-row { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+
+<nav class="toc">
+  <a href="#palette">Palette</a>
+  <a href="#type">Type</a>
+  <a href="#theme">Theme switch</a>
+  <a href="#toggle">Toggle</a>
+  <a href="#slider">Slider</a>
+  <a href="#todo">Todo list</a>
+  <a href="#rsvp">Focus word</a>
+  <a href="#motion">Motion</a>
+  <a href="#modal">Modal</a>
+  <a href="#tilt">Tilt card</a>
+  <a href="#ants">Marching ants</a>
+  <a href="#overlap">Overlap card</a>
+  <a href="#carousel">Carousel</a>
+  <a href="#responsive">Responsive</a>
+  <a href="#principles">Principles</a>
+  <a href="#flex">Fixed / flexible</a>
+  <a href="#dodont">Do / Don't</a>
+</nav>
+
+<div class="accent-bar">
+  <span class="accent-bar-label">Try a theme</span>
+  <button class="accent-swatch active" data-accent="moon" style="background:#B9A9D9;" title="Moon — dark purple, home base"></button>
+  <button class="accent-swatch" data-accent="lamp" style="background:#E8873A;" title="Lamp — warm dark amber"></button>
+  <button class="accent-swatch" data-accent="dawn" style="background:#7FB8D9;" title="Dawn — pale cool blue"></button>
+  <button class="accent-swatch" data-accent="sun" style="background:#F2C94C;" title="Sun — pale warm ivory"></button>
+  <span class="accent-bar-name" id="accentBarName">Moon</span>
+</div>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow"><span class="eyebrow-dot"></span>PERSONAL DESIGN SYSTEM — V3, INTERACTIVE</div>
+    <h1>Quiet by default.<br>Precious in small doses.</h1>
+    <p class="dek">Not a Lamplight style sheet — a personal system, distilled from Lamplight because it's the clearest expression of the taste. Apply this to Wordnest, Keepsake, or whatever's next: same palette, type, and motion rules, different content and mood. Every control below is live — press it, don't just read about it.</p>
+  </header>
+
+  <section id="palette">
+    <div class="section-head"><span class="section-num">01</span><h2>Palette</h2></div>
+    <p class="section-note">Deep soft purple, not brown or cream. One accent leads per screen — it rotates with context (moonlit, lamp-lit, daylight) rather than staying fixed.</p>
+    <div class="swatch-grid">
+      <div class="panel swatch"><div class="swatch-fill" style="background:var(--void); border:1px solid var(--line);"></div><div class="swatch-info"><div class="swatch-name">Void</div><div class="swatch-role">Ground</div><div class="swatch-hex" id="hexVoid">#1E1826</div></div></div>
+      <div class="panel swatch"><div class="swatch-fill" style="background:var(--surface); border:1px solid var(--line);"></div><div class="swatch-info"><div class="swatch-name">Surface</div><div class="swatch-role">Panels, cards</div><div class="swatch-hex" id="hexSurface">#2A2233</div></div></div>
+      <div class="panel swatch"><div class="swatch-fill" style="background:var(--muted);"></div><div class="swatch-info"><div class="swatch-name">Muted</div><div class="swatch-role">Secondary text</div><div class="swatch-hex" id="hexMuted">#9B8FA8</div></div></div>
+      <div class="panel swatch pickable is-accent" data-accent="moon"><div class="swatch-fill" style="background:#B9A9D9;"></div><div class="swatch-info"><div class="swatch-name">Moon</div><div class="swatch-role">Accent — night</div><div class="swatch-hex">#B9A9D9</div></div></div>
+      <div class="panel swatch pickable" data-accent="lamp"><div class="swatch-fill" style="background:#E8873A;"></div><div class="swatch-info"><div class="swatch-name">Lamp</div><div class="swatch-role">Accent — warm</div><div class="swatch-hex">#E8873A</div></div></div>
+      <div class="panel swatch pickable" data-accent="dawn"><div class="swatch-fill" style="background:#7FB8D9;"></div><div class="swatch-info"><div class="swatch-name">Dawn</div><div class="swatch-role">Accent — day</div><div class="swatch-hex">#7FB8D9</div></div></div>
+      <div class="panel swatch pickable" data-accent="sun"><div class="swatch-fill" style="background:#F2C94C;"></div><div class="swatch-info"><div class="swatch-name">Sun</div><div class="swatch-role">Accent — bright</div><div class="swatch-hex">#F2C94C</div></div></div>
+    </div>
+    <p class="accent-note">Tap a swatch above (or use the bar pinned under the nav) to switch the whole page's world, not just its buttons: Void, Surface and Muted above retint live too, since Lamp and Dawn each carry their own neutral ramp, not just their own highlight color. Pick one accent per screen or mode and let it lead; don't mix moon, lamp and dawn on one view.</p>
+  </section>
+
+  <section id="type">
+    <div class="section-head"><span class="section-num">02</span><h2>Type</h2></div>
+    <p class="section-note">One quiet workhorse font carries everything. Pixel type appears only as a small illustrative label — never a heading, never a paragraph.</p>
+    <div class="panel" style="padding: 4px 0;">
+      <div class="type-row"><div class="type-meta"><div class="type-label">UI &amp; headings</div><div class="type-face">Space Mono, 700</div></div><div class="type-sample"><span class="sample-ui">The Great Wide Open</span></div></div>
+      <div class="type-row"><div class="type-meta"><div class="type-label">Body</div><div class="type-face">Space Mono, 400</div></div><div class="type-sample"><span class="sample-body">Reading text, settings labels, descriptions. Quiet, legible, a little technical.</span></div></div>
+      <div class="type-row"><div class="type-meta"><div class="type-label">Pixel accent</div><div class="type-face">Press Start 2P</div></div><div class="type-sample"><span class="sample-pixel">01 · A SMALL LABEL ONLY</span></div></div>
+    </div>
+  </section>
+
+  <section id="theme">
+    <div class="section-head"><span class="section-num">03</span><h2>Theme switch — try it</h2></div>
+    <p class="section-note">Four reading themes, one accent leading each. Tap through — the crossfade is 400ms, ease-in-out. Nothing snaps.</p>
+    <div class="panel demo-block">
+      <div class="control-label">Reading theme</div>
+      <div class="pill-row" id="themePills">
+        <button class="pill" data-theme="sun">Sun</button>
+        <button class="pill active" data-theme="moon">Moon</button>
+        <button class="pill" data-theme="dawn">Dawn</button>
+        <button class="pill" data-theme="lamp">Lamp</button>
+      </div>
+      <div class="theme-preview" id="themePreview">
+        <div class="orb" id="themeOrb"></div>
+        <div class="tp-title" id="themeTitle">Moonlit</div>
+        <div class="tp-sub">Quiet reading, low light</div>
+      </div>
+      <div class="transport">
+        <button class="transport-btn">⏮</button>
+        <button class="transport-btn main" id="playBtn">▶</button>
+        <button class="transport-btn">⏭</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="toggle">
+    <div class="section-head"><span class="section-num">04</span><h2>Toggle switch — try it</h2></div>
+    <p class="section-note">A capsule On/Off switch, restyled in system colors: soft surfaces instead of dark slate, the live accent instead of a fixed green, no hard red for "off." Click it.</p>
+    <div class="panel demo-block" style="text-align:center;">
+      <button class="qp-toggle qp-toggle--off" id="qpToggle" role="switch" aria-checked="false">
+        <span class="qp-toggle-knob" id="qpToggleKnob">Off</span>
+      </button>
+      <div class="qp-toggle-label" id="qpToggleLabel">Auto-play sequence: off</div>
+    </div>
+  </section>
+
+  <section id="slider">
+    <div class="section-head"><span class="section-num">05</span><h2>Pill-track slider — try it</h2></div>
+    <p class="section-note">Lamplight's slider: a slim capsule track that fills with the live accent as you drag, a ringed thumb that pops on focus, and an optional dot-tick row underneath for stepped values. This is the default slider for anything that needs a range input.</p>
+    <div class="panel demo-block">
+      <div class="qp-slider-row">
+        <div class="qp-slider-head">
+          <span class="qp-slider-label">Reading speed</span>
+          <span class="qp-slider-value" id="qpSliderSpeedValue">395 wpm</span>
+        </div>
+        <input type="range" class="qp-slider" id="qpSliderSpeed" min="150" max="700" step="5" value="395">
+      </div>
+
+      <div class="qp-slider-row">
+        <div class="qp-slider-head">
+          <span class="qp-slider-label">Shelf size</span>
+          <span class="qp-slider-value" id="qpSliderShelfValue">Medium</span>
+        </div>
+        <input type="range" class="qp-slider" id="qpSliderShelf" min="0" max="2" step="1" value="1">
+      </div>
+
+      <div class="qp-slider-row">
+        <div class="qp-slider-head">
+          <span class="qp-slider-label">Text size</span>
+          <span class="qp-slider-value" id="qpSliderTextValue">Step 3 of 6</span>
+        </div>
+        <input type="range" class="qp-slider" id="qpSliderText" min="1" max="6" step="1" value="3">
+        <div class="qp-slider-ticks" id="qpSliderTextTicks">
+          <span class="qp-tick"></span><span class="qp-tick"></span><span class="qp-tick"></span>
+          <span class="qp-tick"></span><span class="qp-tick"></span><span class="qp-tick"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="todo">
+    <div class="section-head"><span class="section-num">06</span><h2>Input + todo list — try it</h2></div>
+    <p class="section-note">A neumorphic input and list: the input sits pressed into the surface, each row reads as a softly raised tile, and the checkbox is an etched dent that fills with the live accent when checked. Type something and hit enter.</p>
+    <div class="panel demo-block qp-todo-wrap">
+      <div class="qp-input-group">
+        <input type="text" id="qpTodoInput" placeholder="Add a quiet task…" spellcheck="false">
+      </div>
+      <ul class="qp-todo-list" id="qpTodoList">
+        <li onclick="qpToggleTodo(this)">
+          <div class="qp-check"></div>
+          <span class="qp-todo-text">Sketch the reading-theme icon set</span>
+        </li>
+        <li class="is-done" onclick="qpToggleTodo(this)">
+          <div class="qp-check"></div>
+          <span class="qp-todo-text">Port the coverflow carousel to vanilla JS</span>
+        </li>
+        <li onclick="qpToggleTodo(this)">
+          <div class="qp-check"></div>
+          <span class="qp-todo-text">Write the motion spec table</span>
+        </li>
+      </ul>
+      <span class="qp-todo-count" id="qpTodoCount">2 tasks remaining</span>
+    </div>
+  </section>
+
+  <section id="rsvp">
+    <div class="section-head"><span class="section-num">07</span><h2>Focus word — the signature move</h2></div>
+    <p class="section-note">The RSVP reader's word-pulse is the most identifiable motion in the whole system: each word scales up, glows softly, and settles — 650ms, one pass, never looping harshly.</p>
+    <div class="panel rsvp-demo">
+      <div class="rsvp-line" id="rsvpLine">the quiet room held its <span class="rsvp-word">breath</span></div>
+      <div class="rsvp-controls">
+        <button class="rsvp-play" id="rsvpPlay">▶ Play sequence</button>
+        <span class="rsvp-speed">395 wpm</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="motion">
+    <div class="section-head"><span class="section-num">08</span><h2>Motion spec</h2></div>
+    <p class="section-note">Every transition above, named — reuse these values rather than inventing new timing per project.</p>
+    <div class="panel principles">
+      <div class="principle"><div class="principle-mark">◐</div><div><div class="principle-title">Theme crossfade — 400ms, ease-in-out</div><div class="principle-body">Background, accent, and orb colors fade together. No slide, no scale — a pure color transition, like light changing in a room.</div></div></div>
+      <div class="principle"><div class="principle-mark">○</div><div><div class="principle-title">Focus word pulse — 650ms, one-shot</div><div class="principle-body">Scale 1→1.16 with a soft text-shadow bloom, settling back to 1. Runs once per word, never loops or repeats mid-word.</div></div></div>
+      <div class="principle"><div class="principle-mark">◇</div><div><div class="principle-title">Control press — 120ms, scale(0.96–0.97)</div><div class="principle-body">Every tappable pill, button, and transport control compresses slightly on press. It's the only "snappy" motion in the system — feedback needs to feel immediate.</div></div></div>
+      <div class="principle"><div class="principle-mark">⬭</div><div><div class="principle-title">Toggle switch — 400ms, knob slide + shape morph</div><div class="principle-body">The capsule knob slides across and its corners un-round asymmetrically (rounded on the leading edge, square on the trailing one) as it moves. Color crossfades from muted to accent at the same time — no separate color-then-move sequencing.</div></div></div>
+      <div class="principle"><div class="principle-mark">▭</div><div><div class="principle-title">Panel / modal open — 280ms, translateY(16px)→0 + fade</div><div class="principle-body">Sheets rise gently from below rather than appearing instantly. Ease-in-out throughout, no bounce or overshoot.</div></div></div>
+      <div class="principle"><div class="principle-mark">◒</div><div><div class="principle-title">Reduced motion — crossfade only</div><div class="principle-body">With prefers-reduced-motion set, every animation above collapses to an instant or near-instant state change. Never disable the feedback entirely — just remove the movement.</div></div></div>
+    </div>
+  </section>
+
+  <section id="modal">
+    <div class="section-head"><span class="section-num">09</span><h2>Sheet / modal — try it</h2></div>
+    <p class="section-note">Rises from the bottom on mobile and tablet; centers on wide screens. Same component, responsive by breakpoint.</p>
+    <div class="panel demo-block" style="text-align:center;">
+      <button class="modal-trigger" id="modalOpen">Open Customize sheet</button>
+    </div>
+  </section>
+
+  <section id="tilt">
+    <div class="section-head"><span class="section-num">10</span><h2>Tilt card — try it</h2></div>
+    <p class="section-note">A pure-CSS 3D tilt card, no JS — a hidden 7×7 hover-trap grid drives the angle via <code>:has()</code>. Tilt is softened from the source (14° max, not 25°) and the glow uses the accent ring instead of raw white, so it reads as "considered," not flashy. Move your cursor across it.</p>
+    <div class="panel tilt-wrap">
+      <div class="tilt-scene">
+        <div class="tilt-grid">
+          <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+            <div class="tilt-trap"></div>
+        </div>
+        <div class="tilt-card">
+          <div class="tilt-text">
+            <h3>Wordnest</h3>
+            <p>Card component — hover anywhere on the card to tilt toward your cursor.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tilt-hint">Cursor position sets the tilt — no JavaScript, just a hover grid and CSS variables.</div>
+    </div>
+  </section>
+
+  <section id="ants">
+    <div class="section-head"><span class="section-num">11</span><h2>Marching ants border — try it</h2></div>
+    <p class="section-note">An animated dashed outline built from two repeating-gradient pseudo-elements — no image, no SVG. Kept slow and single-color to stay quiet; pauses on hover so it never fights your cursor. Three tuned variants below, all using the live accent.</p>
+    <div class="panel demo-block">
+      <div class="ants-demo-grid">
+        <div class="ants ants-demo-card">
+          <div class="ants-demo-label">Default</div>
+          <div class="ants-demo-sub">900ms · accent → transparent</div>
+        </div>
+        <div class="ants ants--active ants-demo-card">
+          <div class="ants-demo-label">Active / recording</div>
+          <div class="ants-demo-sub">500ms · faster, use sparingly</div>
+        </div>
+        <div class="ants ants--soft ants-demo-card">
+          <div class="ants-demo-label">Drop target</div>
+          <div class="ants-demo-sub">1400ms · muted, barely-there</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="overlap">
+    <div class="section-head"><span class="section-num">12</span><h2>Overlap card</h2></div>
+    <p class="section-note">A tag/media panel that bleeds down into a rounded content panel below it — one continuous shape, not two stacked boxes. Three tinted variants using moon, lamp, and dawn as paired tones (never full-saturation, always mixed into a surface); a reverse variant flips which panel sits on top.</p>
+    <div class="oc-grid">
+      <div class="oc-card oc-card--moon">
+        <div class="oc-top"><span class="oc-tag">Fiction</span></div>
+        <div class="oc-bottom">
+          <div class="oc-title">The Great Wide Open</div>
+          <div class="oc-text">A quiet room, morning light, and a breath held just a little too long.</div>
+        </div>
+      </div>
+      <div class="oc-card oc-card--lamp reverse">
+        <div class="oc-top"><span class="oc-tag">Essay</span></div>
+        <div class="oc-bottom">
+          <div class="oc-title">Static</div>
+          <div class="oc-text">Reverse variant — content panel leads, tag panel sits below.</div>
+        </div>
+      </div>
+      <div class="oc-card oc-card--dawn">
+        <div class="oc-top"><span class="oc-tag">Memoir</span></div>
+        <div class="oc-bottom">
+          <div class="oc-title">The Unfinished Garden</div>
+          <div class="oc-text">Dawn-toned variant — cooler, quieter, for morning-mode contexts.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="carousel">
+    <div class="section-head"><span class="section-num">13</span><h2>Coverflow carousel — try it</h2></div>
+    <p class="section-note">The default pattern for animating through a set of cards: the active one sits forward and sharp, neighbors tilt back in 3D and blur their captions. Spring-like easing, not linear. Click a side card, a dot, or the arrows.</p>
+    <div class="panel cf-wrap">
+      <div class="cf-stage">
+        <div class="cf-track" id="cfTrack">
+          <div class="cf-slide" data-i="0"><div class="cf-cover" style="background:#E8873A;">Everything We Left Behind</div><div class="cf-caption">Everything We Left Behind</div></div>
+          <div class="cf-slide" data-i="1"><div class="cf-cover" style="background:#2a2a2a;">Glass Houses</div><div class="cf-caption">Glass Houses</div></div>
+          <div class="cf-slide" data-i="2"><div class="cf-cover" style="background:#E85C8A;">The Great Wide Open</div><div class="cf-caption">The Great Wide Open</div></div>
+          <div class="cf-slide" data-i="3"><div class="cf-cover" style="background:#2F5FD9;">Static</div><div class="cf-caption">Static</div></div>
+          <div class="cf-slide" data-i="4"><div class="cf-cover" style="background:#C9AEDC;">The Unfinished Garden</div><div class="cf-caption">The Unfinished Garden</div></div>
+        </div>
+      </div>
+      <div class="cf-controls">
+        <button class="cf-nav" id="cfPrev">‹</button>
+        <div class="cf-dots" id="cfDots"></div>
+        <button class="cf-nav" id="cfNext">›</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="responsive">
+    <div class="section-head"><span class="section-num">14</span><h2>Responsive rules</h2></div>
+    <p class="section-note">Three breakpoints, one component set. Switch the tabs below to see the shelf and controls adapt.</p>
+    <div class="panel" style="overflow:hidden; margin-bottom:14px;">
+      <table class="bp-table">
+        <tr><th>Breakpoint</th><th>Range</th><th>Layout</th></tr>
+        <tr><td class="name">Mobile</td><td>≤ 480px</td><td>Single column, full-width controls, sheets rise from bottom, 36px book spines</td></tr>
+        <tr><td class="name">Tablet</td><td>481–1024px</td><td>Centered content column, controls stay pill-shaped, sheets can float centered, 46px spines</td></tr>
+        <tr><td class="name">Desktop</td><td>1025px+</td><td>Max-width ~760px content, hover states active, 54px spines, more breathing room</td></tr>
+      </table>
+    </div>
+    <div class="panel sim-frame-wrap">
+      <div class="sim-tabs">
+        <button class="sim-tab" data-w="mobile">Mobile</button>
+        <button class="sim-tab active" data-w="tablet">Tablet</button>
+        <button class="sim-tab" data-w="desktop">Desktop</button>
+      </div>
+      <div class="sim-viewport-outer">
+        <div class="sim-viewport" data-w="tablet" id="simViewport">
+          <div class="sim-shelf-row">
+            <div class="sim-book" style="background:#E8873A;"></div>
+            <div class="sim-book" style="background:#1a1a1a;"></div>
+            <div class="sim-book" style="background:#E85C8A;"></div>
+            <div class="sim-book" style="background:#2F5FD9;"></div>
+            <div class="sim-book" style="background:#C9AEDC;"></div>
+            <div class="sim-book" style="background:#4FD1A5;"></div>
+          </div>
+          <div class="sim-controls">
+            <span class="pill active">Moon</span>
+            <span class="pill">Sun</span>
+            <span class="pill">Dawn</span>
+          </div>
+        </div>
+      </div>
+      <div class="sim-label">Book width and control density scale with viewport — nothing reflows awkwardly in between.</div>
+    </div>
+  </section>
+
+  <section id="principles">
+    <div class="section-head"><span class="section-num">15</span><h2>Principles</h2></div>
+    <div class="panel principles">
+      <div class="principle"><div class="principle-mark">◐</div><div><div class="principle-title">Pixel art illustrates, it doesn't build</div><div class="principle-body">The moon, sun, lamp, and bonfire are small pixel-art scenes — not the material the buttons and cards are made of.</div></div></div>
+      <div class="principle"><div class="principle-mark">○</div><div><div class="principle-title">Rounded and soft, not notched</div><div class="principle-body">Every container and control gets a real border-radius. Hard edges read as loud — this system stays quiet.</div></div></div>
+      <div class="principle"><div class="principle-mark">◇</div><div><div class="principle-title">One accent leads, contextually</div><div class="principle-body">The accent shifts with mode rather than staying fixed brand-wide. It's mood lighting, not a logo color.</div></div></div>
+      <div class="principle"><div class="principle-mark">▭</div><div><div class="principle-title">Let the content be the color</div><div class="principle-body">The UI chrome stays low-contrast and dark. Saturated color belongs to content — book spines, artwork — not to buttons and panels.</div></div></div>
+    </div>
+  </section>
+
+  <section id="flex">
+    <div class="section-head"><span class="section-num">16</span><h2>Fixed vs. flexible</h2></div>
+    <p class="section-note">The point of a personal system isn't to make every app look identical — it's that a stranger could see three of your apps side by side and know they came from the same hand. These are the load-bearing rules versus the room each app has to move.</p>
+    <div class="dd-grid">
+      <div class="panel dd-card do">
+        <div class="dd-head">Fixed — every app</div>
+        <ul>
+          <li>Void/surface/muted neutrals — the dark soft-purple base never changes</li>
+          <li>Rounded, soft shapes — no notched or hard-edged UI chrome</li>
+          <li>Space Mono for UI + body; pixel type stays a small accent</li>
+          <li>Motion timing and easing (280ms panels, 650ms one-shot pulses, no bounce)</li>
+          <li>One accent leading per screen, never several fighting</li>
+        </ul>
+      </div>
+      <div class="panel dd-card dont">
+        <div class="dd-head">Flexible — per app</div>
+        <ul>
+          <li>Which accent hue is "home base" (moon/lamp/dawn are Lamplight's — a new app can own a different hue in the same family)</li>
+          <li>What the pixel illustration actually depicts (moon and lamp are reading-specific; a task app might use different small motifs)</li>
+          <li>Layout structure and information density (a flashcard app isn't a shelf-plus-reader)</li>
+          <li>Where the "loud" saturated moment lives (book spines here; could be cards, tiles, tags elsewhere)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="dodont">
+    <div class="section-head"><span class="section-num">17</span><h2>Do / Don't</h2></div>
+    <div class="dd-grid">
+      <div class="panel dd-card do"><div class="dd-head">Do</div><ul><li>Dark, soft-purple grounds by default</li><li>Rounded pills and circles for controls</li><li>Small pixel illustrations as focal moments</li><li>One contextual accent per screen</li><li>280–650ms eased transitions, nothing instant or bouncy</li></ul></div>
+      <div class="panel dd-card dont"><div class="dd-head">Don't</div><ul><li>Notched corners or hard flat borders on UI chrome</li><li>Pixel type or pixel borders on every element</li><li>Warm cream as the default ground</li><li>Multiple accents fighting on one screen</li><li>Bounce, overshoot, or spring easing anywhere</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">18</span><h2>Where the color lives</h2></div>
+    <p class="section-note">The one loud moment in the whole system — book spines on the shelf. Everything else stays quiet so this can pop.</p>
+    <div class="spine-row">
+      <div class="spine" style="background:#E8873A;">Everything We Left Behind</div>
+      <div class="spine" style="background:#1a1a1a;">Glass Houses</div>
+      <div class="spine" style="background:#E85C8A;">The Great Wide Open</div>
+      <div class="spine" style="background:#2F5FD9;">Static</div>
+      <div class="spine" style="background:#C9AEDC;">The Unfinished Garden</div>
+    </div>
+    <p class="spine-note">Full-saturation color is earned, not default — it belongs to content people chose, not the interface holding it.</p>
+  </section>
+
+  <section>
+    <div class="section-head"><span class="section-num">19</span><h2>Already in the wild</h2></div>
+    <div class="app-row">
+      <div class="app-chip"><span class="app-dot" style="background:var(--moon);"></span>Lamplight</div>
+      <div class="app-chip"><span class="app-dot" style="background:var(--dawn);"></span>Wordnest</div>
+      <div class="app-chip"><span class="app-dot" style="background:var(--lamp);"></span>Keepsake</div>
+    </div>
+  </section>
+
+  <footer><span>Quiet Pixel — Visual Identity v3, interactive</span><span>Base: Lamplight</span></footer>
+
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <strong style="font-size:14px;">Customize</strong>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="control-label">Reading theme</div>
+    <div class="pill-row" style="margin-bottom:18px;">
+      <span class="pill active">Moon</span><span class="pill">Sun</span><span class="pill">Dawn</span><span class="pill">Lamp</span>
+    </div>
+    <div class="control-label">Text size</div>
+    <div class="pill-row"><span class="pill" style="font-size:10px;">A</span><span class="pill active">A</span><span class="pill" style="font-size:15px;">A</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var THEMES = {
+    sun:   { accent: '#7A66A6', bg: '#EFE9DB', fg: '#3A3226', orb: '#F2C94C', glow: 'rgba(242,201,76,0.5)', title: 'Sunlit', sub: 'Bright, gentle focus' },
+    moon:  { accent: '#7A66A6', bg: '#1E1826', fg: '#EDE7F2', orb: '#B9A9D9', glow: 'rgba(185,169,217,0.45)', title: 'Moonlit', sub: 'Quiet reading, low light' },
+    dawn:  { accent: '#3C7FA6', bg: '#DCEAF2', fg: '#1E3A4A', orb: '#7FB8D9', glow: 'rgba(127,184,217,0.5)', title: 'Dawn', sub: 'Cool, soft morning light' },
+    lamp:  { accent: '#D9772E', bg: '#1F1712', fg: '#F2E6D8', orb: '#E8873A', glow: 'rgba(232,135,58,0.5)', title: 'Lamplit', sub: 'Warm, focused evening glow' }
+  };
+
+  // ACCENT is the global, page-wide swatch — moon/lamp/dawn/sun (the four accent colors),
+  // separate from THEMES which also carries background/orb for the reading-theme demo.
+  var ACCENT = {
+    moon: { hex: '#B9A9D9', ring: 'rgba(185,169,217,0.14)', name: 'Moon' },
+    lamp: { hex: '#E8873A', ring: 'rgba(232,135,58,0.16)', name: 'Lamp' },
+    dawn: { hex: '#7FB8D9', ring: 'rgba(127,184,217,0.16)', name: 'Dawn' },
+    sun:  { hex: '#F2C94C', ring: 'rgba(242,201,76,0.2)', name: 'Sun' }
+  };
+  // Mirrors the :root[data-page-theme="…"] neutral values in <style> exactly, so the
+  // Void/Surface/Muted hex labels in the palette section stay truthful when the swatch
+  // fills themselves (now var(--void) etc.) retint live.
+  var NEUTRALS = {
+    moon: { void: '#1E1826', surface: '#2A2233', muted: '#9B8FA8' },
+    lamp: { void: '#1F150E', surface: '#2A1E14', muted: '#B99B7C' },
+    dawn: { void: '#E9F1F6', surface: '#FFFFFF', muted: '#5A7E8F' },
+    sun:  { void: '#F4EDDB', surface: '#FFFBF0', muted: '#8A7A56' }
+  };
+  var root = document.documentElement;
+  var accentBarSwatches = document.querySelectorAll('.accent-swatch');
+  var paletteSwatches = document.querySelectorAll('.swatch.pickable');
+  var accentBarName = document.getElementById('accentBarName');
+  var hexVoid = document.getElementById('hexVoid');
+  var hexSurface = document.getElementById('hexSurface');
+  var hexMuted = document.getElementById('hexMuted');
+
+  function setGlobalAccent(key){
+    var a = ACCENT[key];
+    if (!a) return;
+    // data-page-theme swaps the WHOLE neutral ramp (void/surface/muted/line) per the
+    // html[data-page-theme="..."] blocks in <style> — this is what makes Lamp/Dawn
+    // dominate the page rather than just tinting buttons.
+    root.setAttribute('data-page-theme', key);
+    var n = NEUTRALS[key];
+    if (n){
+      hexVoid.textContent = n.void;
+      hexSurface.textContent = n.surface;
+      hexMuted.textContent = n.muted;
+    }
+    root.style.setProperty('--accent', a.hex);
+    root.style.setProperty('--accent-ring', a.ring);
+    accentBarSwatches.forEach(function(s){ s.classList.toggle('active', s.dataset.accent === key); });
+    paletteSwatches.forEach(function(s){ s.classList.toggle('is-accent', s.dataset.accent === key); });
+    accentBarName.textContent = a.name;
+  }
+  accentBarSwatches.forEach(function(s){
+    s.addEventListener('click', function(){ setGlobalAccent(s.dataset.accent); });
+  });
+  paletteSwatches.forEach(function(s){
+    s.addEventListener('click', function(){ setGlobalAccent(s.dataset.accent); });
+  });
+
+  var pills = document.querySelectorAll('#themePills .pill');
+  var preview = document.getElementById('themePreview');
+  var orb = document.getElementById('themeOrb');
+  var title = document.getElementById('themeTitle');
+  var sub = preview.querySelector('.tp-sub');
+
+  function applyTheme(key){
+    var t = THEMES[key];
+    preview.style.setProperty('--tp-bg', t.bg);
+    preview.style.setProperty('--tp-fg', t.fg);
+    preview.style.setProperty('--tp-orb', t.orb);
+    preview.style.setProperty('--tp-glow', t.glow);
+    title.textContent = t.title;
+    sub.textContent = t.sub;
+    pills.forEach(function(p){
+      p.classList.toggle('active', p.dataset.theme === key);
+      p.style.setProperty('--accent-live', t.accent);
+    });
+    // Moon/Lamp/Dawn reading themes double as accent picks; Sun stays visually distinct
+    // (a pale morning look) but keeps whichever accent is already leading the page.
+    if (ACCENT[key]) setGlobalAccent(key);
+  }
+  pills.forEach(function(p){
+    p.addEventListener('click', function(){ applyTheme(p.dataset.theme); });
+  });
+  applyTheme('moon');
+
+  var qpToggle = document.getElementById('qpToggle');
+  var qpToggleKnob = document.getElementById('qpToggleKnob');
+  var qpToggleLabel = document.getElementById('qpToggleLabel');
+  qpToggle.addEventListener('click', function(){
+    var isOn = qpToggle.classList.contains('qp-toggle--on');
+    qpToggle.classList.toggle('qp-toggle--on', !isOn);
+    qpToggle.classList.toggle('qp-toggle--off', isOn);
+    qpToggle.classList.add('qp-toggle--moving');
+    qpToggle.setAttribute('aria-checked', String(!isOn));
+    qpToggleKnob.textContent = isOn ? 'Off' : 'On';
+    qpToggleLabel.textContent = 'Auto-play sequence: ' + (isOn ? 'off' : 'on');
+    setTimeout(function(){ qpToggle.classList.remove('qp-toggle--moving'); }, 400);
+  });
+
+  function qpSliderFill(input){
+    var min = parseFloat(input.min || 0);
+    var max = parseFloat(input.max || 100);
+    var val = parseFloat(input.value);
+    var pct = ((val - min) / (max - min)) * 100;
+    input.style.setProperty('--qp-fill', pct + '%');
+  }
+
+  var qpSliderSpeed = document.getElementById('qpSliderSpeed');
+  var qpSliderSpeedValue = document.getElementById('qpSliderSpeedValue');
+  function qpUpdateSpeed(){
+    qpSliderSpeedValue.textContent = qpSliderSpeed.value + ' wpm';
+    qpSliderFill(qpSliderSpeed);
+  }
+  qpSliderSpeed.addEventListener('input', qpUpdateSpeed);
+  qpUpdateSpeed();
+
+  var qpSliderShelf = document.getElementById('qpSliderShelf');
+  var qpSliderShelfValue = document.getElementById('qpSliderShelfValue');
+  var SHELF_LABELS = ['Small', 'Medium', 'Large'];
+  function qpUpdateShelf(){
+    qpSliderShelfValue.textContent = SHELF_LABELS[qpSliderShelf.value] || qpSliderShelf.value;
+    qpSliderFill(qpSliderShelf);
+  }
+  qpSliderShelf.addEventListener('input', qpUpdateShelf);
+  qpUpdateShelf();
+
+  var qpSliderText = document.getElementById('qpSliderText');
+  var qpSliderTextValue = document.getElementById('qpSliderTextValue');
+  var qpSliderTextTicks = document.getElementById('qpSliderTextTicks').querySelectorAll('.qp-tick');
+  function qpUpdateText(){
+    var step = parseInt(qpSliderText.value, 10);
+    var max = parseInt(qpSliderText.max, 10);
+    qpSliderTextValue.textContent = 'Step ' + step + ' of ' + max;
+    qpSliderFill(qpSliderText);
+    qpSliderTextTicks.forEach(function(tick, i){
+      tick.classList.toggle('is-past', i < step);
+    });
+  }
+  qpSliderText.addEventListener('input', qpUpdateText);
+  qpUpdateText();
+
+  var qpTodoInput = document.getElementById('qpTodoInput');
+  var qpTodoList = document.getElementById('qpTodoList');
+  var qpTodoCount = document.getElementById('qpTodoCount');
+
+  function qpUpdateTodoCount(){
+    var remaining = qpTodoList.querySelectorAll('li:not(.is-done)').length;
+    qpTodoCount.textContent = remaining + (remaining === 1 ? ' task remaining' : ' tasks remaining');
+  }
+
+  window.qpToggleTodo = function(el){
+    el.classList.toggle('is-done');
+    qpUpdateTodoCount();
+  };
+
+  qpTodoInput.addEventListener('keypress', function(e){
+    if (e.key === 'Enter' && this.value.trim() !== ''){
+      var li = document.createElement('li');
+      li.style.opacity = '0';
+      li.setAttribute('onclick', 'qpToggleTodo(this)');
+      li.innerHTML = '<div class="qp-check"></div><span class="qp-todo-text"></span>';
+      li.querySelector('.qp-todo-text').textContent = this.value;
+      qpTodoList.insertBefore(li, qpTodoList.firstChild);
+      setTimeout(function(){ li.style.transition = 'opacity 0.3s ' + 'var(--ease)'; li.style.opacity = '1'; }, 10);
+      this.value = '';
+      qpUpdateTodoCount();
+    }
+  });
+  qpUpdateTodoCount();
+
+  var playBtn = document.getElementById('playBtn');
+  var playing = false;
+  playBtn.addEventListener('click', function(){
+    playing = !playing;
+    playBtn.textContent = playing ? '❚❚' : '▶';
+    playBtn.classList.toggle('playing', playing);
+  });
+
+  var rsvpWords = ['the','quiet','room','held','its','breath','as','morning','light','moved','slowly'];
+  var rsvpLine = document.getElementById('rsvpLine');
+  var rsvpPlay = document.getElementById('rsvpPlay');
+  var rsvpTimer = null, rsvpIdx = 0, rsvpRunning = false;
+
+  function renderRsvp(idx){
+    var html = '';
+    for (var i = 0; i < rsvpWords.length; i++){
+      if (i === idx) html += '<span class="rsvp-word focus">' + rsvpWords[i] + '</span> ';
+      else html += rsvpWords[i] + ' ';
+    }
+    rsvpLine.innerHTML = html.trim();
+  }
+  function stepRsvp(){
+    renderRsvp(rsvpIdx);
+    rsvpIdx++;
+    if (rsvpIdx >= rsvpWords.length){
+      clearInterval(rsvpTimer);
+      rsvpRunning = false;
+      rsvpPlay.textContent = '▶ Play sequence';
+    }
+  }
+  rsvpPlay.addEventListener('click', function(){
+    if (rsvpRunning){
+      clearInterval(rsvpTimer);
+      rsvpRunning = false;
+      rsvpPlay.textContent = '▶ Play sequence';
+      return;
+    }
+    rsvpIdx = 0;
+    rsvpRunning = true;
+    rsvpPlay.textContent = '❚❚ Pause';
+    stepRsvp();
+    rsvpTimer = setInterval(stepRsvp, 550);
+  });
+
+  var modalBackdrop = document.getElementById('modalBackdrop');
+  document.getElementById('modalOpen').addEventListener('click', function(){
+    modalBackdrop.classList.add('open');
+  });
+  document.getElementById('modalClose').addEventListener('click', function(){
+    modalBackdrop.classList.remove('open');
+  });
+  modalBackdrop.addEventListener('click', function(e){
+    if (e.target === modalBackdrop) modalBackdrop.classList.remove('open');
+  });
+
+  // --- coverflow carousel ---
+  var cfSlides = document.querySelectorAll('.cf-slide');
+  var cfTotal = cfSlides.length;
+  var cfActive = 2;
+  var cfDotsWrap = document.getElementById('cfDots');
+  cfSlides.forEach(function(_, i){
+    var d = document.createElement('button');
+    d.className = 'cf-dot';
+    d.addEventListener('click', function(){ cfGoTo(i); });
+    cfDotsWrap.appendChild(d);
+  });
+  var cfDots = document.querySelectorAll('.cf-dot');
+
+  function cfRender(){
+    cfSlides.forEach(function(slide, i){
+      var offset = cfActive - i;
+      var isActive = offset === 0;
+      var tx = -offset * 108;              // horizontal spacing between covers — wide enough that they clear mid-turn
+      var rot = offset * -26;              // rotateY per step off-center — slightly shallower so the gap reads clean
+      var scale = isActive ? 1 : 0.78;
+      var z = -Math.abs(offset) * 110;     // pushes neighbors well back in 3D, avoids any mid-transition overlap
+      slide.style.transform = 'translateX(' + tx + 'px) translateZ(' + z + 'px) rotateY(' + rot + 'deg) scale(' + scale + ')';
+      // z-index doesn't animate, so during the turn a receding card could flash above the active one —
+      // biasing it toward the active slide's stacking order keeps that frame from ever reading as "on top"
+      slide.style.zIndex = String(100 - Math.abs(offset) * 2);
+      slide.style.opacity = Math.abs(offset) > 2 ? '0' : '1';
+      slide.classList.toggle('is-active', isActive);
+    });
+    cfDots.forEach(function(d, i){ d.classList.toggle('is-active', i === cfActive); });
+  }
+  function cfGoTo(i){
+    cfActive = Math.max(0, Math.min(cfTotal - 1, i));
+    cfRender();
+  }
+  cfSlides.forEach(function(slide, i){
+    slide.addEventListener('click', function(){ cfGoTo(i); });
+  });
+  document.getElementById('cfPrev').addEventListener('click', function(){ cfGoTo(cfActive - 1); });
+  document.getElementById('cfNext').addEventListener('click', function(){ cfGoTo(cfActive + 1); });
+  cfRender();
+
+  var simTabs = document.querySelectorAll('.sim-tab');
+  var simViewport = document.getElementById('simViewport');
+  simTabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      simTabs.forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      simViewport.setAttribute('data-w', tab.dataset.w);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
