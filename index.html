@@ -541,6 +541,82 @@
   .oc-card--lamp { --oc-a: color-mix(in srgb, var(--lamp) 18%, var(--surface)); --oc-b: color-mix(in srgb, var(--moon) 20%, var(--surface)); }
   .oc-card--dawn { --oc-a: color-mix(in srgb, var(--dawn) 20%, var(--surface)); --oc-b: color-mix(in srgb, var(--lamp) 16%, var(--surface)); }
 
+  /* --- painted gradient art (out-of-theme accent) ---
+     a procedurally-painted blob gradient, ported from a canvas-based
+     generator in a flashcard app: soft radial blobs blurred together, a
+     touch of grain, and a light rim-stroke. This is an INTENTIONAL
+     exception to the flat, restrained Quiet Pixel palette — a saturated,
+     expressive accent for moments that want one, not a replacement for
+     the system palette. Use sparingly: a card face, a hero panel, a
+     loading state. Never for UI chrome (buttons, panels, text). */
+  .ga-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .ga-swatch {
+    aspect-ratio: 1; border-radius: 12px; overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; position: relative;
+    transition: border-color 0.2s var(--ease), transform 0.12s var(--ease);
+  }
+  .ga-swatch:active { transform: scale(0.96); }
+  .ga-swatch.is-active { border-color: var(--text); }
+  .ga-swatch canvas { width: 100%; height: 100%; display: block; }
+  .ga-swatch-name {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px;
+    font-size: 9.5px; font-weight: 700; color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .ga-demo { display: flex; justify-content: center; }
+  .ga-demo-card {
+    width: 200px; height: 260px; border-radius: 20px; overflow: hidden; position: relative;
+    box-shadow: 0 20px 44px -18px rgba(0,0,0,0.4);
+  }
+  .ga-demo-card canvas { width: 100%; height: 100%; display: block; }
+  .ga-demo-label {
+    position: absolute; left: 18px; bottom: 18px; color: white;
+    font-size: 13px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+
+  /* --- flip card (3D front/back reveal, e.g. a flashcard) ---
+     ported from a jQuery/Stylus source that used a bouncy overshoot easing
+     and a flat white back on a saturated blue page. Quiet Pixel version:
+     the settle uses the system --ease (no overshoot, stays "considered"),
+     the front is a plain panel and the back leads with the live accent so
+     flipping reads as a state change, not just a reveal. Click anywhere
+     on the card. */
+  .flip-wrap { display: grid; place-content: center; padding: 10px 20px 30px; }
+  .flip-container {
+    width: 220px; height: 150px;
+    position: relative;
+    perspective: 900px;
+  }
+  .flip-card {
+    width: 100%; height: 100%;
+    position: absolute;
+    transform-style: preserve-3d;
+    /* the source's bounce, kept as-is — small overshoot past 180deg then
+       settles back, a little snap of personality on an otherwise quiet page */
+    transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+  }
+  .flip-card.is-flipped { transform: rotateY(180deg); }
+  .flip-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 18px;
+    text-align: center;
+    box-shadow: 0 1px 0 var(--line), 0 8px 24px -18px rgba(0,0,0,0.4);
+  }
+  .flip-face.front { background: var(--surface-2); border: 1px solid var(--line); }
+  .flip-face-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .flip-face-word { font-size: 19px; font-weight: 700; color: var(--text); }
+  .flip-face.back {
+    transform: rotateY(180deg);
+    background: var(--accent); color: var(--void);
+    transition: background 0.4s var(--ease);
+  }
+  .flip-face.back .flip-face-label { color: color-mix(in srgb, var(--void) 70%, transparent); }
+  .flip-face.back .flip-face-word { color: var(--void); }
+  .flip-hint { text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 16px; }
+
   /* --- coverflow carousel (3D card carousel with spring-like motion) --- */
   .cf-wrap { padding: 8px 20px 30px; display: flex; flex-direction: column; align-items: center; }
   .cf-stage {
@@ -590,6 +666,51 @@
     transition: width 0.3s var(--ease), background 0.3s var(--ease);
   }
   .cf-dot.is-active { width: 22px; background: var(--accent); }
+
+  /* --- shelf carousel (fanned 3D covers, second carousel pattern) ---
+     different feel from coverflow: the whole row shares one tilt (like books
+     leaning on a shelf, viewed at an angle) rather than each card rotating
+     individually. ported from a React/Motion/Tailwind source that used
+     translateZ steps for depth ordering and a spring on width + rotateY for
+     the active-card pop; here the "spring" is a cubic-bezier transition,
+     same trick as the coverflow above, so no animation library is needed. */
+  .sh-wrap { padding: 20px 20px 30px; display: flex; flex-direction: column; align-items: center; }
+  .sh-stage {
+    width: 100%; max-width: 480px; height: 280px;
+    display: flex; align-items: flex-end; justify-content: center;
+    perspective: 1100px;
+  }
+  .sh-row {
+    display: flex; align-items: flex-end; gap: 14px;
+    transform-style: preserve-3d;
+    transform: rotateX(8deg) rotateY(-22deg);
+  }
+  .sh-slot {
+    /* depth-ordered via translateZ, same purpose as the source's per-index
+       translateZ step — later items sit further back so the fan reads in 3D */
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(.22,1.2,.36,1);
+  }
+  .sh-cover {
+    width: 90px; height: 132px; border-radius: 8px;
+    box-shadow: 0 10px 22px -10px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: width 0.45s cubic-bezier(.22,1.2,.36,1), height 0.45s cubic-bezier(.22,1.2,.36,1),
+                transform 0.45s cubic-bezier(.22,1.2,.36,1), box-shadow 0.4s var(--ease);
+    display: flex; align-items: flex-end; padding: 10px 9px;
+    font-size: 10px; font-weight: 700; color: white; line-height: 1.3;
+  }
+  .sh-slot.is-active .sh-cover {
+    width: 136px; height: 194px;
+    transform: translateY(-20px);
+    box-shadow: 0 18px 32px -14px rgba(0,0,0,0.45), 0 0 0 3px var(--accent-ring);
+  }
+
+  .sh-controls {
+    margin-top: 18px; display: flex; align-items: center; gap: 14px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--line);
+  }
 
   /* transport */
   .transport { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 22px; }
@@ -715,6 +836,7 @@
     .dd-grid { grid-template-columns: 1fr; }
     .type-row { flex-direction: column; align-items: flex-start; }
   }
+
 </style>
 
 <nav class="toc">
@@ -728,9 +850,12 @@
   <a href="#motion">Motion</a>
   <a href="#modal">Modal</a>
   <a href="#tilt">Tilt card</a>
+  <a href="#flip">Flip card</a>
   <a href="#ants">Marching ants</a>
   <a href="#overlap">Overlap card</a>
+  <a href="#gradientart">Gradient art</a>
   <a href="#carousel">Carousel</a>
+  <a href="#shelf">Shelf carousel</a>
   <a href="#responsive">Responsive</a>
   <a href="#principles">Principles</a>
   <a href="#flex">Fixed / flexible</a>
@@ -973,8 +1098,30 @@
     </div>
   </section>
 
+  <section id="flip">
+    <div class="section-head"><span class="section-num">11</span><h2>Flip card — try it</h2></div>
+    <p class="section-note">A 3D front/back reveal — good for a flashcard, a stat that expands into detail, or a reversible summary. Keeps its source's overshoot easing on purpose: a small bounce past 180° that settles back, one of the few playful motions in the system. The back leads with the live accent so the state change reads clearly. Click the card.</p>
+    <div class="panel demo-block">
+      <div class="flip-wrap">
+        <div class="flip-container" id="flipContainer">
+          <div class="flip-card" id="flipCard">
+            <div class="flip-face front">
+              <span class="flip-face-label">French</span>
+              <span class="flip-face-word">la fenêtre</span>
+            </div>
+            <div class="flip-face back">
+              <span class="flip-face-label">English</span>
+              <span class="flip-face-word">the window</span>
+            </div>
+          </div>
+        </div>
+        <div class="flip-hint">Tap or click to flip — Wordnest's card-review pattern.</div>
+      </div>
+    </div>
+  </section>
+
   <section id="ants">
-    <div class="section-head"><span class="section-num">11</span><h2>Marching ants border — try it</h2></div>
+    <div class="section-head"><span class="section-num">12</span><h2>Marching ants border — try it</h2></div>
     <p class="section-note">An animated dashed outline built from two repeating-gradient pseudo-elements — no image, no SVG. Kept slow and single-color to stay quiet; pauses on hover so it never fights your cursor. Three tuned variants below, all using the live accent.</p>
     <div class="panel demo-block">
       <div class="ants-demo-grid">
@@ -995,7 +1142,7 @@
   </section>
 
   <section id="overlap">
-    <div class="section-head"><span class="section-num">12</span><h2>Overlap card</h2></div>
+    <div class="section-head"><span class="section-num">13</span><h2>Overlap card</h2></div>
     <p class="section-note">A tag/media panel that bleeds down into a rounded content panel below it — one continuous shape, not two stacked boxes. Three tinted variants using moon, lamp, and dawn as paired tones (never full-saturation, always mixed into a surface); a reverse variant flips which panel sits on top.</p>
     <div class="oc-grid">
       <div class="oc-card oc-card--moon">
@@ -1022,8 +1169,22 @@
     </div>
   </section>
 
+  <section id="gradientart">
+    <div class="section-head"><span class="section-num">14</span><h2>Painted gradient art — out of theme, on purpose</h2></div>
+    <p class="section-note">Not part of the Quiet Pixel palette — a deliberate exception. Procedurally-painted radial blobs, blurred together with a touch of grain and a light rim-stroke, ported from Wordnest's flashcard art. Saturated where the rest of the system is restrained. Use it for a card face, a hero panel, or a loading state — never for buttons, panels, or text. Tap a swatch to preview it below.</p>
+    <div class="panel demo-block">
+      <div class="ga-grid" id="gaGrid"></div>
+      <div class="ga-demo">
+        <div class="ga-demo-card">
+          <canvas id="gaDemoCanvas" width="480" height="624"></canvas>
+          <span class="ga-demo-label" id="gaDemoLabel">Persimmon</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="carousel">
-    <div class="section-head"><span class="section-num">13</span><h2>Coverflow carousel — try it</h2></div>
+    <div class="section-head"><span class="section-num">15</span><h2>Coverflow carousel — try it</h2></div>
     <p class="section-note">The default pattern for animating through a set of cards: the active one sits forward and sharp, neighbors tilt back in 3D and blur their captions. Spring-like easing, not linear. Click a side card, a dot, or the arrows.</p>
     <div class="panel cf-wrap">
       <div class="cf-stage">
@@ -1043,8 +1204,29 @@
     </div>
   </section>
 
+  <section id="shelf">
+    <div class="section-head"><span class="section-num">16</span><h2>Shelf carousel — try it</h2></div>
+    <p class="section-note">A second carousel pattern: instead of each card rotating in place like coverflow, the whole row shares one tilt — like books leaning on a shelf, viewed at an angle. The active cover pops up and widens with a springy overshoot. Use this where the "leaning shelf" feel fits (a library, a collection), coverflow where a single focused card fits better.</p>
+    <div class="panel sh-wrap">
+      <div class="sh-stage">
+        <div class="sh-row" id="shRow">
+          <div class="sh-slot" data-i="0"><div class="sh-cover" style="background:#E8873A;">Everything We Left Behind</div></div>
+          <div class="sh-slot" data-i="1"><div class="sh-cover" style="background:#2a2a2a;">Glass Houses</div></div>
+          <div class="sh-slot is-active" data-i="2"><div class="sh-cover" style="background:#E85C8A;">The Great Wide Open</div></div>
+          <div class="sh-slot" data-i="3"><div class="sh-cover" style="background:#2F5FD9;">Static</div></div>
+          <div class="sh-slot" data-i="4"><div class="sh-cover" style="background:#C9AEDC;">The Unfinished Garden</div></div>
+        </div>
+      </div>
+      <div class="sh-controls">
+        <button class="cf-nav" id="shPrev">‹</button>
+        <div class="cf-dots" id="shDots"></div>
+        <button class="cf-nav" id="shNext">›</button>
+      </div>
+    </div>
+  </section>
+
   <section id="responsive">
-    <div class="section-head"><span class="section-num">14</span><h2>Responsive rules</h2></div>
+    <div class="section-head"><span class="section-num">17</span><h2>Responsive rules</h2></div>
     <p class="section-note">Three breakpoints, one component set. Switch the tabs below to see the shelf and controls adapt.</p>
     <div class="panel" style="overflow:hidden; margin-bottom:14px;">
       <table class="bp-table">
@@ -1082,7 +1264,7 @@
   </section>
 
   <section id="principles">
-    <div class="section-head"><span class="section-num">15</span><h2>Principles</h2></div>
+    <div class="section-head"><span class="section-num">18</span><h2>Principles</h2></div>
     <div class="panel principles">
       <div class="principle"><div class="principle-mark">◐</div><div><div class="principle-title">Pixel art illustrates, it doesn't build</div><div class="principle-body">The moon, sun, lamp, and bonfire are small pixel-art scenes — not the material the buttons and cards are made of.</div></div></div>
       <div class="principle"><div class="principle-mark">○</div><div><div class="principle-title">Rounded and soft, not notched</div><div class="principle-body">Every container and control gets a real border-radius. Hard edges read as loud — this system stays quiet.</div></div></div>
@@ -1092,7 +1274,7 @@
   </section>
 
   <section id="flex">
-    <div class="section-head"><span class="section-num">16</span><h2>Fixed vs. flexible</h2></div>
+    <div class="section-head"><span class="section-num">19</span><h2>Fixed vs. flexible</h2></div>
     <p class="section-note">The point of a personal system isn't to make every app look identical — it's that a stranger could see three of your apps side by side and know they came from the same hand. These are the load-bearing rules versus the room each app has to move.</p>
     <div class="dd-grid">
       <div class="panel dd-card do">
@@ -1118,7 +1300,7 @@
   </section>
 
   <section id="dodont">
-    <div class="section-head"><span class="section-num">17</span><h2>Do / Don't</h2></div>
+    <div class="section-head"><span class="section-num">20</span><h2>Do / Don't</h2></div>
     <div class="dd-grid">
       <div class="panel dd-card do"><div class="dd-head">Do</div><ul><li>Dark, soft-purple grounds by default</li><li>Rounded pills and circles for controls</li><li>Small pixel illustrations as focal moments</li><li>One contextual accent per screen</li><li>280–650ms eased transitions, nothing instant or bouncy</li></ul></div>
       <div class="panel dd-card dont"><div class="dd-head">Don't</div><ul><li>Notched corners or hard flat borders on UI chrome</li><li>Pixel type or pixel borders on every element</li><li>Warm cream as the default ground</li><li>Multiple accents fighting on one screen</li><li>Bounce, overshoot, or spring easing anywhere</li></ul></div>
@@ -1126,7 +1308,7 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">18</span><h2>Where the color lives</h2></div>
+    <div class="section-head"><span class="section-num">21</span><h2>Where the color lives</h2></div>
     <p class="section-note">The one loud moment in the whole system — book spines on the shelf. Everything else stays quiet so this can pop.</p>
     <div class="spine-row">
       <div class="spine" style="background:#E8873A;">Everything We Left Behind</div>
@@ -1139,7 +1321,7 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">19</span><h2>Already in the wild</h2></div>
+    <div class="section-head"><span class="section-num">22</span><h2>Already in the wild</h2></div>
     <div class="app-row">
       <div class="app-chip"><span class="app-dot" style="background:var(--moon);"></span>Lamplight</div>
       <div class="app-chip"><span class="app-dot" style="background:var(--dawn);"></span>Wordnest</div>
@@ -1338,6 +1520,11 @@
   });
   qpUpdateTodoCount();
 
+  var flipCard = document.getElementById('flipCard');
+  flipCard.addEventListener('click', function(){
+    flipCard.classList.toggle('is-flipped');
+  });
+
   var playBtn = document.getElementById('playBtn');
   var playing = false;
   playBtn.addEventListener('click', function(){
@@ -1433,6 +1620,135 @@
   document.getElementById('cfPrev').addEventListener('click', function(){ cfGoTo(cfActive - 1); });
   document.getElementById('cfNext').addEventListener('click', function(){ cfGoTo(cfActive + 1); });
   cfRender();
+
+  // --- shelf carousel — a second carousel pattern: one shared tilt on the whole
+  // row (books leaning on a shelf), each cover depth-ordered by distance from
+  // the active one, active cover pops up and widens on a spring-ish curve ---
+  var shSlots = document.querySelectorAll('.sh-slot');
+  var shTotal = shSlots.length;
+  var shActive = 2;
+  var shDotsWrap = document.getElementById('shDots');
+  shSlots.forEach(function(_, i){
+    var d = document.createElement('button');
+    d.className = 'cf-dot';
+    d.addEventListener('click', function(){ shGoTo(i); });
+    shDotsWrap.appendChild(d);
+  });
+  var shDots = shDotsWrap.querySelectorAll('.cf-dot');
+
+  function shRender(){
+    shSlots.forEach(function(slot, i){
+      var dist = shActive - i;
+      var isActive = dist === 0;
+      // later-index covers sit further back so the fan reads in 3D, same
+      // purpose as the source's per-index translateZ step
+      var z = -Math.abs(dist) * 40;
+      var y = isActive ? -6 : 0;
+      slot.style.transform = 'translateZ(' + z + 'px) translateY(' + y + 'px)';
+      slot.style.zIndex = String(100 - Math.abs(dist));
+      slot.classList.toggle('is-active', isActive);
+    });
+    shDots.forEach(function(d, i){ d.classList.toggle('is-active', i === shActive); });
+  }
+  function shGoTo(i){
+    shActive = Math.max(0, Math.min(shTotal - 1, i));
+    shRender();
+  }
+  shSlots.forEach(function(slot, i){
+    slot.addEventListener('click', function(){ shGoTo(i); });
+  });
+  document.getElementById('shPrev').addEventListener('click', function(){ shGoTo(shActive - 1); });
+  document.getElementById('shNext').addEventListener('click', function(){ shGoTo(shActive + 1); });
+  shRender();
+
+  // --- painted gradient art — procedural blob-gradient generator, ported
+  // and simplified from a canvas-based flashcard app. Each palette is
+  // [name, base, blobA, blobB, blobC, highlight]. A handful of soft radial
+  // blobs are blurred together on the canvas, then a light rim-stroke is
+  // added so the card edge doesn't look flat. Deliberately out-of-theme —
+  // see the section note. ---
+  var GA_PALETTES = [
+    ['Persimmon', '#f5aa84', '#ff7256', '#0b310c', '#3c7918', '#ffe0bd'],
+    ['Tidal',     '#83f8b4', '#11b6ab', '#00336c', '#0062a2', '#c9ffc8'],
+    ['Afterglow', '#f4a0b8', '#de0759', '#36051e', '#790937', '#f6c3f0'],
+    ['Ember',     '#ff5735', '#e6070c', '#100313', '#4d0024', '#ffb778'],
+    ['Moonstone', '#a2b2cb', '#8b83af', '#1e2435', '#42465d', '#e4e1cf'],
+    ['Ultraviolet','#db8bf0','#7455de', '#18082b', '#34205c', '#ffa48d'],
+    ['Apricity',  '#ffc987', '#f3933b', '#58201d', '#a43c2e', '#ffe8a7'],
+    ['Lagoon',    '#b8f1de', '#43cbb6', '#003f43', '#07695b', '#e7f5bb'],
+    ['Rosewater', '#ffbbb3', '#e67588', '#592047', '#8b295d', '#fff1ce']
+  ];
+
+  function gaBlob(ctx, x, y, rx, ry, color, alpha){
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(rx, ry);
+    var g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, color);
+    g.addColorStop(0.4, color);
+    g.addColorStop(1, color + '00');
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = g;
+    ctx.fillRect(-1, -1, 2, 2);
+    ctx.restore();
+  }
+
+  function gaPaint(canvas, p, seed){
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width, h = canvas.height;
+    var off = document.createElement('canvas');
+    off.width = 240; off.height = Math.round(240 * h / w);
+    var c = off.getContext('2d'), W = off.width, H = off.height;
+    var rand = function(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    var x = 0.4 + rand() * 0.2, y = 0.45 + rand() * 0.13;
+    var rx = 0.32 + rand() * 0.08, ry = 0.44 + rand() * 0.07;
+    c.fillStyle = p[1]; c.fillRect(0, 0, W, H);
+    gaBlob(c, W * 0.75, H * 0.6, W * 0.95, H * 0.95, p[2], 1);
+    gaBlob(c, W * 0.2, H * 0.16, W * 0.8, H * 0.75, p[5], 0.55);
+    gaBlob(c, W * x, H * y, W * (rx + 0.12), H * (ry + 0.07), p[4], 1);
+    gaBlob(c, W * x, H * y, W * rx, H * ry, p[3], 1);
+    gaBlob(c, W * x, H * y, W * rx * 0.73, H * ry * 0.78, p[3], 0.85);
+    c.save();
+    c.globalCompositeOperation = 'screen';
+    gaBlob(c, W * rand(), -H * 0.08, W * 0.78, H * 0.3, p[5], 0.5);
+    c.restore();
+    ctx.clearRect(0, 0, w, h);
+    ctx.filter = 'blur(14px)';
+    ctx.drawImage(off, -12, -12, w + 24, h + 24);
+    ctx.filter = 'none';
+    var rim = ctx.createLinearGradient(0, 0, w, h);
+    rim.addColorStop(0, '#ffffff70'); rim.addColorStop(0.35, '#ffffff08');
+    rim.addColorStop(0.7, '#ffffff00'); rim.addColorStop(1, '#ffffff30');
+    ctx.strokeStyle = rim; ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, w - 3, h - 3);
+  }
+
+  var gaGrid = document.getElementById('gaGrid');
+  var gaDemoCanvas = document.getElementById('gaDemoCanvas');
+  var gaDemoLabel = document.getElementById('gaDemoLabel');
+  var gaSwatchEls = [];
+  GA_PALETTES.forEach(function(p, i){
+    var swatch = document.createElement('div');
+    swatch.className = 'ga-swatch';
+    if (i === 0) swatch.classList.add('is-active');
+    var c = document.createElement('canvas');
+    c.width = 180; c.height = 180;
+    gaPaint(c, p, i * 97 + 11);
+    var label = document.createElement('span');
+    label.className = 'ga-swatch-name';
+    label.textContent = p[0];
+    swatch.appendChild(c);
+    swatch.appendChild(label);
+    swatch.addEventListener('click', function(){
+      gaSwatchEls.forEach(function(s){ s.classList.remove('is-active'); });
+      swatch.classList.add('is-active');
+      gaPaint(gaDemoCanvas, p, i * 97 + 11);
+      gaDemoLabel.textContent = p[0];
+    });
+    gaGrid.appendChild(swatch);
+    gaSwatchEls.push(swatch);
+  });
+  gaPaint(gaDemoCanvas, GA_PALETTES[0], 11);
 
   var simTabs = document.querySelectorAll('.sim-tab');
   var simViewport = document.getElementById('simViewport');
