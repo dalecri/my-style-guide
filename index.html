@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Quiet Pixel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+<title>Quiet Pixel</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap');
 
@@ -92,25 +92,66 @@
   .wrap { max-width: 760px; margin: 0 auto; padding-block: 56px 100px; }
   h1, h2, h3 { margin: 0; text-wrap: balance; font-family: 'Space Mono', monospace; }
 
-  /* nav */
+  /* --- nav: a slide-out drawer instead of a horizontal pill scroller —
+     24 sections outgrew a single scrolling row. The top bar is now just a
+     menu trigger + wordmark (sticky, same 45px height the accent-bar below
+     still docks under). The drawer itself slides in from the left, dims the
+     page behind it, and lists every section as a full-width row so nothing
+     is hidden off-screen to the side. */
   .toc {
     position: sticky; top: 0; z-index: 20;
     background: var(--void);
     border-bottom: 1px solid var(--line);
     margin: 0 -20px 0;
     padding: 12px 20px;
-    display: flex; gap: 4px; overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    display: flex; align-items: center; gap: 12px;
     transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
   }
-  /* accent-bar sticks directly under the toc — 45px matches toc's rendered height (12px*2 padding + ~21px line-height) */
-  .toc::-webkit-scrollbar { display: none; }
+  .toc-menu-btn {
+    display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    background: var(--surface-2); border: none; cursor: pointer; padding: 0 8px;
+    transition: background 0.2s var(--ease), transform 0.12s var(--ease);
+  }
+  .toc-menu-btn:active { transform: scale(0.94); }
+  .toc-menu-btn span { display: block; height: 2px; border-radius: 2px; background: var(--text); transition: transform 0.25s var(--ease), opacity 0.2s var(--ease); }
+  .toc-menu-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .toc-drawer-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 29;
+    opacity: 0; pointer-events: none; transition: opacity 0.28s var(--ease);
+  }
+  .toc-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .toc-drawer {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 30;
+    width: min(280px, 82vw);
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    box-shadow: 24px 0 48px -24px rgba(0,0,0,0.4);
+    padding: 18px 10px 24px;
+    display: flex; flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.32s var(--ease), background 0.4s var(--ease), border-color 0.4s var(--ease);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .toc-drawer.open { transform: translateX(0); }
+  .toc-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px 16px; }
+  .toc-drawer-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .toc-drawer-close {
+    width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--surface-2);
+    color: var(--muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .toc-drawer-close:hover { color: var(--text); }
   .toc a {
-    flex-shrink: 0; font-size: 11px; color: var(--muted); text-decoration: none;
-    padding: 7px 12px; border-radius: 999px; white-space: nowrap;
+    display: block;
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    padding: 9px 12px; border-radius: 10px;
     transition: background 0.2s var(--ease), color 0.2s var(--ease);
   }
   .toc a:hover { background: var(--surface-2); color: var(--text); }
+  .toc a.is-current { background: var(--accent-ring); color: var(--accent); font-weight: 700; }
 
   .eyebrow {
     font-size: 11px; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase;
@@ -248,6 +289,42 @@
   .qp-toggle--moving .qp-toggle-knob { transition-timing-function: var(--ease); }
   .qp-toggle-label { font-size: 11px; color: var(--muted); margin-top: 12px; }
 
+  /* --- mechanical keycap button (out-of-theme accent, like the gradient art) ---
+     ported from a GBA-cartridge-themed portfolio page: a hard, thick drop-shadow
+     "keycap" instead of the system's soft blurred shadows, compressing flat on
+     press. Deliberately loud/tactile against the rest of Quiet Pixel's language —
+     use it sparingly, for playful or game-like controls, not everyday buttons.
+     Responds to both click and the real keyboard (arrow keys + Enter below). */
+  .qp-keys-row { display: flex; align-items: flex-end; justify-content: center; gap: 14px; flex-wrap: wrap; }
+  .qp-key {
+    min-width: 54px; height: 54px; padding: 0 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
+                0 6px 0 var(--line),
+                0 10px 10px -6px rgba(0,0,0,0.35);
+    transform: translateY(0);
+    transition: transform 0.08s var(--ease), box-shadow 0.08s var(--ease), background 0.2s var(--ease);
+  }
+  .qp-key.wide { min-width: 108px; }
+  .qp-key:hover { background: var(--surface); }
+  .qp-key.pressed {
+    background: var(--accent-ring);
+    color: var(--accent);
+    transform: translateY(4px);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
+                0 2px 0 var(--line),
+                0 3px 4px -2px rgba(0,0,0,0.3);
+  }
+  .qp-keys-hint { text-align: center; font-size: 10.5px; color: var(--muted); margin-top: 18px; }
+
   /* --- slider (Lamplight's pill-track range input) — the default control for any
      continuous value: reading speed, sizes, volumes. Fill runs from the left edge to
      the thumb, track and thumb stay soft, no native browser chrome anywhere. */
@@ -292,6 +369,180 @@
   .qp-slider-ticks { display: flex; justify-content: space-between; padding: 0 2px; margin-top: -2px; }
   .qp-tick { width: 4px; height: 4px; border-radius: 50%; background: var(--line); transition: background 0.4s var(--ease); }
   .qp-tick.is-past { background: var(--accent); }
+
+  /* --- custom/settings panel (floating card, dot-scale sliders + segmented row) ---
+     a compact "control panel" pattern — a title bar with a refresh/reset action,
+     stacked dot-track sliders (a variant of the pill-track slider above, but with
+     visible tick dots the whole width of the track instead of a filled bar), and
+     a segmented pill row that ends in a toggle. Reads as a floating settings card:
+     slightly elevated off its background, soft and roundest of all the panels. */
+  .qp-panel-wrap { display: flex; justify-content: center; padding: 6px 4px 4px; }
+  .qp-cpanel {
+    width: 100%; max-width: 360px;
+    background: var(--surface);
+    border-radius: 22px;
+    padding: 18px 18px 20px;
+    box-shadow: 0 1px 0 var(--line), 0 24px 48px -20px rgba(0,0,0,0.35);
+  }
+  .qp-cpanel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .qp-cpanel-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .qp-cpanel-refresh {
+    width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface-2);
+    color: var(--muted); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px; transition: transform 0.4s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .qp-cpanel-refresh:hover { color: var(--text); }
+  .qp-cpanel-refresh.is-spinning { transform: rotate(360deg); }
+
+  .qp-cpanel-row { margin-bottom: 14px; }
+  .qp-cpanel-row-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .qp-cpanel-label { font-size: 12.5px; color: var(--text); }
+  .qp-cpanel-value { font-size: 11.5px; color: var(--accent); font-variant-numeric: tabular-nums; transition: color 0.4s var(--ease); }
+
+  /* dot-scale slider — same transparent-thumb trick as .qp-slider, but the track
+     itself is a faint dot row (not a filled bar) with one dot promoted into a
+     little pill "handle" that slides between them, echoing the reference's
+     dot-scale look while staying built from tokens instead of hardcoded greys. */
+  .qp-dotscale { position: relative; height: 30px; display: flex; align-items: center; }
+  .qp-dotscale-track {
+    position: absolute; left: 0; right: 0; display: flex; justify-content: space-between;
+    padding: 0 2px; pointer-events: none;
+  }
+  .qp-dotscale-track span { width: 4px; height: 4px; border-radius: 50%; background: var(--line); transition: background 0.4s var(--ease); }
+  .qp-dotscale input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 30px; background: transparent; margin: 0; cursor: pointer; position: relative; z-index: 1;
+  }
+  .qp-dotscale input[type="range"]::-webkit-slider-runnable-track { height: 30px; background: transparent; }
+  .qp-dotscale input[type="range"]::-moz-range-track { height: 30px; background: transparent; }
+  .qp-dotscale input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 4px; height: 22px; border-radius: 3px; margin-top: 0;
+    background: var(--accent); border: none; cursor: pointer;
+    box-shadow: 0 0 0 6px var(--accent-ring);
+    transition: background 0.4s var(--ease), box-shadow 0.4s var(--ease);
+  }
+  .qp-dotscale input[type="range"]::-moz-range-thumb {
+    width: 4px; height: 22px; border-radius: 3px;
+    background: var(--accent); border: none; cursor: pointer;
+    box-shadow: 0 0 0 6px var(--accent-ring);
+  }
+
+  /* segmented row: icon pills that pick a mode, plus a trailing capsule toggle —
+     the panel's "footer" control, same pill/toggle language as sections 04 & 06
+     but packed tighter and mixed on one line. */
+  .qp-cpanel-seg { display: flex; align-items: center; gap: 6px; margin-top: 18px; }
+  .qp-seg-btn {
+    flex: 1; height: 40px; border-radius: 12px; border: 1px solid transparent;
+    background: var(--surface-2); color: var(--muted); font-size: 15px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.12s var(--ease);
+  }
+  .qp-seg-btn:active { transform: scale(0.95); }
+  .qp-seg-btn.active { background: var(--accent-ring); color: var(--accent); border-color: var(--accent); }
+  .qp-cpanel-seg-divider { width: 1px; height: 22px; background: var(--line); margin: 0 4px; flex-shrink: 0; }
+
+  /* mini toggle — same on/off language as .qp-toggle, scaled down to sit inline
+     in the segmented row instead of standing alone */
+  .qp-toggle-mini {
+    position: relative; width: 44px; height: 26px; border-radius: 999px; flex-shrink: 0;
+    border: none; background: var(--surface-2); cursor: pointer; padding: 0;
+    transition: background 0.3s var(--ease);
+  }
+  .qp-toggle-mini::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.3s var(--ease), background 0.3s var(--ease);
+  }
+  .qp-toggle-mini.is-on { background: var(--accent); }
+  .qp-toggle-mini.is-on::after { transform: translateX(18px); }
+
+  /* --- sign-in card (auth panel with segmented mode switch) ---
+     a floating auth card over a blurred backdrop: a pill-track segmented
+     control for Sign In / Sign Up (reusing the same "sliding capsule" idea
+     as the toggle switch, but two labeled halves instead of on/off), plain
+     labeled inputs, a solid accent CTA, an "or" divider, and a dashed-border
+     ghost button for the guest path. */
+  .qp-signin-scene {
+    position: relative; border-radius: 24px; overflow: hidden;
+    padding: 40px 16px; display: flex; justify-content: center;
+    background:
+      radial-gradient(60% 50% at 30% 20%, color-mix(in srgb, var(--dawn) 30%, transparent), transparent),
+      radial-gradient(55% 45% at 75% 75%, color-mix(in srgb, var(--lamp) 26%, transparent), transparent),
+      var(--surface-2);
+  }
+  .qp-signin-scene::before {
+    content: ''; position: absolute; inset: 0;
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+  }
+  .qp-signin-card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 340px;
+    background: var(--surface);
+    border-radius: 22px;
+    padding: 26px 24px 28px;
+    box-shadow: 0 1px 0 var(--line), 0 30px 60px -24px rgba(0,0,0,0.45);
+  }
+  .qp-signin-title { font-size: 19px; font-weight: 700; margin-bottom: 6px; }
+  .qp-signin-sub { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+
+  /* segmented mode switch — a pill track with a sliding white/surface capsule,
+     same physical idea as .qp-toggle's knob but two named halves instead of
+     an icon-only on/off state */
+  .qp-signin-switch {
+    position: relative; display: flex; background: var(--surface-2);
+    border-radius: 999px; padding: 4px; margin-bottom: 22px;
+  }
+  .qp-signin-switch-thumb {
+    position: absolute; top: 4px; left: 4px; bottom: 4px;
+    width: calc(50% - 4px); border-radius: 999px; background: var(--surface);
+    box-shadow: 0 1px 0 var(--line), 0 6px 14px -8px rgba(0,0,0,0.3);
+    transition: transform 0.3s var(--ease);
+  }
+  .qp-signin-switch.is-signup .qp-signin-switch-thumb { transform: translateX(100%); }
+  .qp-signin-switch-btn {
+    position: relative; z-index: 1; flex: 1; text-align: center;
+    padding: 10px 0; border: none; background: none; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 12.5px; font-weight: 700;
+    color: var(--muted); transition: color 0.3s var(--ease);
+  }
+  .qp-signin-switch-btn.is-active { color: var(--text); }
+
+  .qp-signin-field { margin-bottom: 16px; }
+  .qp-signin-field-label { font-size: 10.5px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 6px; display: block; }
+  .qp-signin-field input {
+    width: 100%; background: var(--void); border: 1px solid var(--line);
+    border-radius: 12px; padding: 13px 14px; font-family: 'Space Mono', monospace;
+    font-size: 13px; color: var(--text); outline: none;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.4s var(--ease);
+  }
+  .qp-signin-field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+    background: color-mix(in srgb, var(--accent) 6%, var(--void));
+  }
+
+  .qp-signin-cta {
+    width: 100%; padding: 14px 0; margin-top: 6px; border: none; border-radius: 999px;
+    background: var(--accent); color: var(--void); font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: transform 0.12s var(--ease), background 0.4s var(--ease);
+  }
+  .qp-signin-cta:active { transform: scale(0.98); }
+
+  .qp-signin-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; }
+  .qp-signin-divider::before, .qp-signin-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .qp-signin-divider span { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .qp-signin-ghost {
+    width: 100%; padding: 13px 0; border-radius: 999px;
+    background: none; border: 1px dashed var(--line); color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 12.5px; cursor: pointer;
+    transition: transform 0.12s var(--ease), border-color 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .qp-signin-ghost:hover { border-color: var(--muted); color: var(--text); }
+  .qp-signin-ghost:active { transform: scale(0.98); }
 
   /* --- neumorphic input + todo list ---
      soft-pressed input on a void-colored inset, rows that read as gently raised
@@ -840,27 +1091,42 @@
 </style>
 
 <nav class="toc">
-  <a href="#palette">Palette</a>
-  <a href="#type">Type</a>
-  <a href="#theme">Theme switch</a>
-  <a href="#toggle">Toggle</a>
-  <a href="#slider">Slider</a>
-  <a href="#todo">Todo list</a>
-  <a href="#rsvp">Focus word</a>
-  <a href="#motion">Motion</a>
-  <a href="#modal">Modal</a>
-  <a href="#tilt">Tilt card</a>
-  <a href="#flip">Flip card</a>
-  <a href="#ants">Marching ants</a>
-  <a href="#overlap">Overlap card</a>
-  <a href="#gradientart">Gradient art</a>
-  <a href="#carousel">Carousel</a>
-  <a href="#shelf">Shelf carousel</a>
-  <a href="#responsive">Responsive</a>
-  <a href="#principles">Principles</a>
-  <a href="#flex">Fixed / flexible</a>
-  <a href="#dodont">Do / Don't</a>
+  <button class="toc-menu-btn" id="tocMenuBtn" aria-label="Open section list" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="toc-menu-label">Quiet Pixel — 25 sections</span>
 </nav>
+
+<div class="toc-drawer-backdrop" id="tocBackdrop"></div>
+<div class="toc-drawer" id="tocDrawer">
+  <div class="toc-drawer-head">
+    <span class="toc-drawer-title">Jump to</span>
+    <button class="toc-drawer-close" id="tocCloseBtn" aria-label="Close section list">✕</button>
+  </div>
+  <a href="#palette">01 · Palette</a>
+  <a href="#type">02 · Type</a>
+  <a href="#theme">03 · Theme switch</a>
+  <a href="#toggle">04 · Toggle</a>
+  <a href="#keys">05 · Keys</a>
+  <a href="#cpanel">06 · Custom panel</a>
+  <a href="#signin">07 · Sign-in card</a>
+  <a href="#slider">08 · Slider</a>
+  <a href="#todo">09 · Todo list</a>
+  <a href="#rsvp">10 · Focus word</a>
+  <a href="#motion">11 · Motion</a>
+  <a href="#modal">12 · Modal</a>
+  <a href="#tilt">13 · Tilt card</a>
+  <a href="#flip">14 · Flip card</a>
+  <a href="#ants">15 · Marching ants</a>
+  <a href="#overlap">16 · Overlap card</a>
+  <a href="#gradientart">17 · Gradient art</a>
+  <a href="#carousel">18 · Carousel</a>
+  <a href="#shelf">19 · Shelf carousel</a>
+  <a href="#responsive">20 · Responsive</a>
+  <a href="#principles">21 · Principles</a>
+  <a href="#flex">22 · Fixed / flexible</a>
+  <a href="#dodont">23 · Do / Don't</a>
+</div>
 
 <div class="accent-bar">
   <span class="accent-bar-label">Try a theme</span>
@@ -939,8 +1205,103 @@
     </div>
   </section>
 
+  <section id="keys">
+    <div class="section-head"><span class="section-num">05</span><h2>Mechanical keycap button — out of theme, on purpose</h2></div>
+    <p class="section-note">A deliberate exception, like the gradient art below: a hard, thick "keycap" drop-shadow instead of the system's soft blurred shadows, compressing flat when pressed. Ported from a game-cartridge-themed portfolio page. Use it for playful or game-like controls — never as the default button. Click a key, or use your physical arrow keys and Enter.</p>
+    <div class="panel demo-block" style="text-align:center;">
+      <div class="qp-keys-row">
+        <button class="qp-key" id="qpKeyLeft">←</button>
+        <button class="qp-key wide" id="qpKeyEnter">Enter</button>
+        <button class="qp-key" id="qpKeyRight">→</button>
+      </div>
+      <div class="qp-keys-hint">Try clicking, or press ← → Enter on your keyboard.</div>
+    </div>
+  </section>
+
+  <section id="cpanel">
+    <div class="section-head"><span class="section-num">06</span><h2>Custom / settings panel — try it</h2></div>
+    <p class="section-note">A floating "conditions" style control card: title bar with a reset action, dot-scale sliders instead of filled bars, and a row of icon pills ending in a compact toggle. Same tokens and easing as the rest of the system — the dots, pills, and mini toggle just pack tighter for a panel meant to hover over other content. Drag a slider, tap a mode, flip the toggle.</p>
+    <div class="panel demo-block">
+      <div class="qp-panel-wrap">
+        <div class="qp-cpanel">
+          <div class="qp-cpanel-head">
+            <span class="qp-cpanel-title">Sky conditions</span>
+            <button class="qp-cpanel-refresh" id="qpCpanelRefresh" title="Reset">↻</button>
+          </div>
+
+          <div class="qp-cpanel-row">
+            <div class="qp-cpanel-row-head">
+              <span class="qp-cpanel-label">Brightness</span>
+              <span class="qp-cpanel-value" id="qpCpanelBrightnessValue">100%</span>
+            </div>
+            <div class="qp-dotscale">
+              <div class="qp-dotscale-track">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <input type="range" id="qpCpanelBrightness" min="0" max="100" step="1" value="100">
+            </div>
+          </div>
+
+          <div class="qp-cpanel-row">
+            <div class="qp-cpanel-row-head">
+              <span class="qp-cpanel-label">Mist</span>
+              <span class="qp-cpanel-value" id="qpCpanelMistValue">1.0x</span>
+            </div>
+            <div class="qp-dotscale">
+              <div class="qp-dotscale-track">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <input type="range" id="qpCpanelMist" min="0" max="20" step="1" value="10">
+            </div>
+          </div>
+
+          <div class="qp-cpanel-seg">
+            <button class="qp-seg-btn active" data-mode="sun" title="Sun">☀</button>
+            <button class="qp-seg-btn" data-mode="cloud" title="Cloudy">☁</button>
+            <button class="qp-seg-btn" data-mode="storm" title="Storm">⚡</button>
+            <div class="qp-cpanel-seg-divider"></div>
+            <button class="qp-toggle-mini is-on" id="qpCpanelToggle" title="Auto-cycle" aria-pressed="true"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="signin">
+    <div class="section-head"><span class="section-num">07</span><h2>Sign-in card — try it</h2></div>
+    <p class="section-note">An auth card over a blurred, colorful backdrop: a segmented Sign In / Sign Up switch reuses the toggle's sliding-capsule idea with two labeled halves, plain inset inputs pick up the accent ring on focus, and a dashed ghost button offers the guest path without competing with the primary CTA. Switch modes, focus a field.</p>
+    <div class="panel demo-block" style="padding: 0; overflow: hidden;">
+      <div class="qp-signin-scene">
+        <div class="qp-signin-card">
+          <div class="qp-signin-title">Skybound Flats</div>
+          <div class="qp-signin-sub" id="qpSigninSub">Sign in to sync your tenants across every device, or stay local as a guest.</div>
+
+          <div class="qp-signin-switch" id="qpSigninSwitch">
+            <div class="qp-signin-switch-thumb"></div>
+            <button class="qp-signin-switch-btn is-active" data-mode="in">Sign In</button>
+            <button class="qp-signin-switch-btn" data-mode="up">Sign Up</button>
+          </div>
+
+          <div class="qp-signin-field">
+            <span class="qp-signin-field-label">Email</span>
+            <input type="email" placeholder="you@example.com">
+          </div>
+          <div class="qp-signin-field">
+            <span class="qp-signin-field-label">Password</span>
+            <input type="password" value="quietpixel">
+          </div>
+
+          <button class="qp-signin-cta" id="qpSigninCta">Sign In</button>
+
+          <div class="qp-signin-divider"><span>Or</span></div>
+          <button class="qp-signin-ghost">Continue as Guest</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="slider">
-    <div class="section-head"><span class="section-num">05</span><h2>Pill-track slider — try it</h2></div>
+    <div class="section-head"><span class="section-num">08</span><h2>Pill-track slider — try it</h2></div>
     <p class="section-note">Lamplight's slider: a slim capsule track that fills with the live accent as you drag, a ringed thumb that pops on focus, and an optional dot-tick row underneath for stepped values. This is the default slider for anything that needs a range input.</p>
     <div class="panel demo-block">
       <div class="qp-slider-row">
@@ -974,7 +1335,7 @@
   </section>
 
   <section id="todo">
-    <div class="section-head"><span class="section-num">06</span><h2>Input + todo list — try it</h2></div>
+    <div class="section-head"><span class="section-num">09</span><h2>Input + todo list — try it</h2></div>
     <p class="section-note">A neumorphic input and list: the input sits pressed into the surface, each row reads as a softly raised tile, and the checkbox is an etched dent that fills with the live accent when checked. Type something and hit enter.</p>
     <div class="panel demo-block qp-todo-wrap">
       <div class="qp-input-group">
@@ -999,7 +1360,7 @@
   </section>
 
   <section id="rsvp">
-    <div class="section-head"><span class="section-num">07</span><h2>Focus word — the signature move</h2></div>
+    <div class="section-head"><span class="section-num">10</span><h2>Focus word — the signature move</h2></div>
     <p class="section-note">The RSVP reader's word-pulse is the most identifiable motion in the whole system: each word scales up, glows softly, and settles — 650ms, one pass, never looping harshly.</p>
     <div class="panel rsvp-demo">
       <div class="rsvp-line" id="rsvpLine">the quiet room held its <span class="rsvp-word">breath</span></div>
@@ -1011,7 +1372,7 @@
   </section>
 
   <section id="motion">
-    <div class="section-head"><span class="section-num">08</span><h2>Motion spec</h2></div>
+    <div class="section-head"><span class="section-num">11</span><h2>Motion spec</h2></div>
     <p class="section-note">Every transition above, named — reuse these values rather than inventing new timing per project.</p>
     <div class="panel principles">
       <div class="principle"><div class="principle-mark">◐</div><div><div class="principle-title">Theme crossfade — 400ms, ease-in-out</div><div class="principle-body">Background, accent, and orb colors fade together. No slide, no scale — a pure color transition, like light changing in a room.</div></div></div>
@@ -1024,7 +1385,7 @@
   </section>
 
   <section id="modal">
-    <div class="section-head"><span class="section-num">09</span><h2>Sheet / modal — try it</h2></div>
+    <div class="section-head"><span class="section-num">12</span><h2>Sheet / modal — try it</h2></div>
     <p class="section-note">Rises from the bottom on mobile and tablet; centers on wide screens. Same component, responsive by breakpoint.</p>
     <div class="panel demo-block" style="text-align:center;">
       <button class="modal-trigger" id="modalOpen">Open Customize sheet</button>
@@ -1032,7 +1393,7 @@
   </section>
 
   <section id="tilt">
-    <div class="section-head"><span class="section-num">10</span><h2>Tilt card — try it</h2></div>
+    <div class="section-head"><span class="section-num">13</span><h2>Tilt card — try it</h2></div>
     <p class="section-note">A pure-CSS 3D tilt card, no JS — a hidden 7×7 hover-trap grid drives the angle via <code>:has()</code>. Tilt is softened from the source (14° max, not 25°) and the glow uses the accent ring instead of raw white, so it reads as "considered," not flashy. Move your cursor across it.</p>
     <div class="panel tilt-wrap">
       <div class="tilt-scene">
@@ -1099,7 +1460,7 @@
   </section>
 
   <section id="flip">
-    <div class="section-head"><span class="section-num">11</span><h2>Flip card — try it</h2></div>
+    <div class="section-head"><span class="section-num">14</span><h2>Flip card — try it</h2></div>
     <p class="section-note">A 3D front/back reveal — good for a flashcard, a stat that expands into detail, or a reversible summary. Keeps its source's overshoot easing on purpose: a small bounce past 180° that settles back, one of the few playful motions in the system. The back leads with the live accent so the state change reads clearly. Click the card.</p>
     <div class="panel demo-block">
       <div class="flip-wrap">
@@ -1121,7 +1482,7 @@
   </section>
 
   <section id="ants">
-    <div class="section-head"><span class="section-num">12</span><h2>Marching ants border — try it</h2></div>
+    <div class="section-head"><span class="section-num">15</span><h2>Marching ants border — try it</h2></div>
     <p class="section-note">An animated dashed outline built from two repeating-gradient pseudo-elements — no image, no SVG. Kept slow and single-color to stay quiet; pauses on hover so it never fights your cursor. Three tuned variants below, all using the live accent.</p>
     <div class="panel demo-block">
       <div class="ants-demo-grid">
@@ -1142,7 +1503,7 @@
   </section>
 
   <section id="overlap">
-    <div class="section-head"><span class="section-num">13</span><h2>Overlap card</h2></div>
+    <div class="section-head"><span class="section-num">16</span><h2>Overlap card</h2></div>
     <p class="section-note">A tag/media panel that bleeds down into a rounded content panel below it — one continuous shape, not two stacked boxes. Three tinted variants using moon, lamp, and dawn as paired tones (never full-saturation, always mixed into a surface); a reverse variant flips which panel sits on top.</p>
     <div class="oc-grid">
       <div class="oc-card oc-card--moon">
@@ -1170,7 +1531,7 @@
   </section>
 
   <section id="gradientart">
-    <div class="section-head"><span class="section-num">14</span><h2>Painted gradient art — out of theme, on purpose</h2></div>
+    <div class="section-head"><span class="section-num">17</span><h2>Painted gradient art — out of theme, on purpose</h2></div>
     <p class="section-note">Not part of the Quiet Pixel palette — a deliberate exception. Procedurally-painted radial blobs, blurred together with a touch of grain and a light rim-stroke, ported from Wordnest's flashcard art. Saturated where the rest of the system is restrained. Use it for a card face, a hero panel, or a loading state — never for buttons, panels, or text. Tap a swatch to preview it below.</p>
     <div class="panel demo-block">
       <div class="ga-grid" id="gaGrid"></div>
@@ -1184,7 +1545,7 @@
   </section>
 
   <section id="carousel">
-    <div class="section-head"><span class="section-num">15</span><h2>Coverflow carousel — try it</h2></div>
+    <div class="section-head"><span class="section-num">18</span><h2>Coverflow carousel — try it</h2></div>
     <p class="section-note">The default pattern for animating through a set of cards: the active one sits forward and sharp, neighbors tilt back in 3D and blur their captions. Spring-like easing, not linear. Click a side card, a dot, or the arrows.</p>
     <div class="panel cf-wrap">
       <div class="cf-stage">
@@ -1205,7 +1566,7 @@
   </section>
 
   <section id="shelf">
-    <div class="section-head"><span class="section-num">16</span><h2>Shelf carousel — try it</h2></div>
+    <div class="section-head"><span class="section-num">19</span><h2>Shelf carousel — try it</h2></div>
     <p class="section-note">A second carousel pattern: instead of each card rotating in place like coverflow, the whole row shares one tilt — like books leaning on a shelf, viewed at an angle. The active cover pops up and widens with a springy overshoot. Use this where the "leaning shelf" feel fits (a library, a collection), coverflow where a single focused card fits better.</p>
     <div class="panel sh-wrap">
       <div class="sh-stage">
@@ -1226,7 +1587,7 @@
   </section>
 
   <section id="responsive">
-    <div class="section-head"><span class="section-num">17</span><h2>Responsive rules</h2></div>
+    <div class="section-head"><span class="section-num">20</span><h2>Responsive rules</h2></div>
     <p class="section-note">Three breakpoints, one component set. Switch the tabs below to see the shelf and controls adapt.</p>
     <div class="panel" style="overflow:hidden; margin-bottom:14px;">
       <table class="bp-table">
@@ -1264,7 +1625,7 @@
   </section>
 
   <section id="principles">
-    <div class="section-head"><span class="section-num">18</span><h2>Principles</h2></div>
+    <div class="section-head"><span class="section-num">21</span><h2>Principles</h2></div>
     <div class="panel principles">
       <div class="principle"><div class="principle-mark">◐</div><div><div class="principle-title">Pixel art illustrates, it doesn't build</div><div class="principle-body">The moon, sun, lamp, and bonfire are small pixel-art scenes — not the material the buttons and cards are made of.</div></div></div>
       <div class="principle"><div class="principle-mark">○</div><div><div class="principle-title">Rounded and soft, not notched</div><div class="principle-body">Every container and control gets a real border-radius. Hard edges read as loud — this system stays quiet.</div></div></div>
@@ -1274,7 +1635,7 @@
   </section>
 
   <section id="flex">
-    <div class="section-head"><span class="section-num">19</span><h2>Fixed vs. flexible</h2></div>
+    <div class="section-head"><span class="section-num">22</span><h2>Fixed vs. flexible</h2></div>
     <p class="section-note">The point of a personal system isn't to make every app look identical — it's that a stranger could see three of your apps side by side and know they came from the same hand. These are the load-bearing rules versus the room each app has to move.</p>
     <div class="dd-grid">
       <div class="panel dd-card do">
@@ -1300,7 +1661,7 @@
   </section>
 
   <section id="dodont">
-    <div class="section-head"><span class="section-num">20</span><h2>Do / Don't</h2></div>
+    <div class="section-head"><span class="section-num">23</span><h2>Do / Don't</h2></div>
     <div class="dd-grid">
       <div class="panel dd-card do"><div class="dd-head">Do</div><ul><li>Dark, soft-purple grounds by default</li><li>Rounded pills and circles for controls</li><li>Small pixel illustrations as focal moments</li><li>One contextual accent per screen</li><li>280–650ms eased transitions, nothing instant or bouncy</li></ul></div>
       <div class="panel dd-card dont"><div class="dd-head">Don't</div><ul><li>Notched corners or hard flat borders on UI chrome</li><li>Pixel type or pixel borders on every element</li><li>Warm cream as the default ground</li><li>Multiple accents fighting on one screen</li><li>Bounce, overshoot, or spring easing anywhere</li></ul></div>
@@ -1308,7 +1669,7 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">21</span><h2>Where the color lives</h2></div>
+    <div class="section-head"><span class="section-num">24</span><h2>Where the color lives</h2></div>
     <p class="section-note">The one loud moment in the whole system — book spines on the shelf. Everything else stays quiet so this can pop.</p>
     <div class="spine-row">
       <div class="spine" style="background:#E8873A;">Everything We Left Behind</div>
@@ -1321,7 +1682,7 @@
   </section>
 
   <section>
-    <div class="section-head"><span class="section-num">22</span><h2>Already in the wild</h2></div>
+    <div class="section-head"><span class="section-num">25</span><h2>Already in the wild</h2></div>
     <div class="app-row">
       <div class="app-chip"><span class="app-dot" style="background:var(--moon);"></span>Lamplight</div>
       <div class="app-chip"><span class="app-dot" style="background:var(--dawn);"></span>Wordnest</div>
@@ -1520,10 +1881,150 @@
   });
   qpUpdateTodoCount();
 
+  // --- slide-out nav drawer ---
+  var tocMenuBtn = document.getElementById('tocMenuBtn');
+  var tocDrawer = document.getElementById('tocDrawer');
+  var tocBackdrop = document.getElementById('tocBackdrop');
+  var tocCloseBtn = document.getElementById('tocCloseBtn');
+  var tocLinks = tocDrawer.querySelectorAll('a');
+
+  function openTocDrawer(){
+    tocDrawer.classList.add('open');
+    tocBackdrop.classList.add('open');
+    tocMenuBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeTocDrawer(){
+    tocDrawer.classList.remove('open');
+    tocBackdrop.classList.remove('open');
+    tocMenuBtn.setAttribute('aria-expanded', 'false');
+  }
+  tocMenuBtn.addEventListener('click', function(){
+    if (tocDrawer.classList.contains('open')) closeTocDrawer(); else openTocDrawer();
+  });
+  tocCloseBtn.addEventListener('click', closeTocDrawer);
+  tocBackdrop.addEventListener('click', closeTocDrawer);
+  tocLinks.forEach(function(link){
+    link.addEventListener('click', closeTocDrawer);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeTocDrawer();
+  });
+
+  // highlight the current section in the drawer as you scroll, so reopening
+  // it shows roughly where you are on the page
+  var tocSections = Array.prototype.map.call(tocLinks, function(link){
+    var id = link.getAttribute('href').slice(1);
+    return { link: link, el: document.getElementById(id) };
+  }).filter(function(s){ return s.el; });
+
+  function updateCurrentTocLink(){
+    var y = window.scrollY + 120;
+    var current = tocSections[0];
+    for (var i = 0; i < tocSections.length; i++){
+      if (tocSections[i].el.offsetTop <= y) current = tocSections[i];
+    }
+    tocSections.forEach(function(s){ s.link.classList.toggle('is-current', s === current); });
+  }
+  window.addEventListener('scroll', updateCurrentTocLink, { passive: true });
+  updateCurrentTocLink();
+
+  // --- sign-in card: segmented Sign In / Sign Up switch drives the CTA
+  // label and the subhead copy, sliding thumb via the .is-signup class.
+  var qpSigninSwitch = document.getElementById('qpSigninSwitch');
+  var qpSigninCta = document.getElementById('qpSigninCta');
+  var qpSigninSub = document.getElementById('qpSigninSub');
+  if (qpSigninSwitch) {
+    var qpSigninBtns = qpSigninSwitch.querySelectorAll('.qp-signin-switch-btn');
+    var qpSigninCopy = {
+      in: { cta: 'Sign In', sub: 'Sign in to sync your tenants across every device, or stay local as a guest.' },
+      up: { cta: 'Create Account', sub: 'Create an account to sync your tenants across every device, or stay local as a guest.' }
+    };
+    qpSigninBtns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var mode = btn.getAttribute('data-mode');
+        qpSigninBtns.forEach(function(b){ b.classList.toggle('is-active', b === btn); });
+        qpSigninSwitch.classList.toggle('is-signup', mode === 'up');
+        qpSigninCta.textContent = qpSigninCopy[mode].cta;
+        qpSigninSub.textContent = qpSigninCopy[mode].sub;
+      });
+    });
+  }
+
   var flipCard = document.getElementById('flipCard');
   flipCard.addEventListener('click', function(){
     flipCard.classList.toggle('is-flipped');
   });
+
+  // --- mechanical keycap keys: click/mousedown AND real keyboard press both
+  // trigger the same .pressed compression, via a keyMap tying physical keys
+  // to their on-screen button.
+  var qpKeyLeft = document.getElementById('qpKeyLeft');
+  var qpKeyRight = document.getElementById('qpKeyRight');
+  var qpKeyEnter = document.getElementById('qpKeyEnter');
+  var qpKeyMap = { 'ArrowLeft': qpKeyLeft, 'ArrowRight': qpKeyRight, 'Enter': qpKeyEnter };
+
+  [qpKeyLeft, qpKeyRight, qpKeyEnter].forEach(function(key){
+    key.addEventListener('mousedown', function(){ key.classList.add('pressed'); });
+    key.addEventListener('mouseup', function(){ key.classList.remove('pressed'); });
+    key.addEventListener('mouseleave', function(){ key.classList.remove('pressed'); });
+    key.addEventListener('touchstart', function(){ key.classList.add('pressed'); }, { passive: true });
+    key.addEventListener('touchend', function(){ key.classList.remove('pressed'); });
+  });
+  document.addEventListener('keydown', function(e){
+    var key = qpKeyMap[e.key];
+    if (key) key.classList.add('pressed');
+  });
+  document.addEventListener('keyup', function(e){
+    var key = qpKeyMap[e.key];
+    if (key) key.classList.remove('pressed');
+  });
+
+  // --- custom / settings panel: two dot-scale sliders, a segmented mode row,
+  // and a mini toggle, all wired independently.
+  var qpCpanelBrightness = document.getElementById('qpCpanelBrightness');
+  var qpCpanelBrightnessValue = document.getElementById('qpCpanelBrightnessValue');
+  var qpCpanelMist = document.getElementById('qpCpanelMist');
+  var qpCpanelMistValue = document.getElementById('qpCpanelMistValue');
+  var qpCpanelRefresh = document.getElementById('qpCpanelRefresh');
+  var qpCpanelToggle = document.getElementById('qpCpanelToggle');
+  var qpSegBtns = document.querySelectorAll('.qp-seg-btn');
+
+  if (qpCpanelBrightness) {
+    qpCpanelBrightness.addEventListener('input', function(){
+      qpCpanelBrightnessValue.textContent = this.value + '%';
+    });
+  }
+  if (qpCpanelMist) {
+    qpCpanelMist.addEventListener('input', function(){
+      qpCpanelMistValue.textContent = (this.value / 10).toFixed(1) + 'x';
+    });
+  }
+  if (qpCpanelRefresh) {
+    qpCpanelRefresh.addEventListener('click', function(){
+      qpCpanelBrightness.value = 100;
+      qpCpanelMist.value = 10;
+      qpCpanelBrightnessValue.textContent = '100%';
+      qpCpanelMistValue.textContent = '1.0x';
+      qpCpanelRefresh.classList.remove('is-spinning');
+      void qpCpanelRefresh.offsetWidth; // restart the spin animation
+      qpCpanelRefresh.classList.add('is-spinning');
+    });
+    qpCpanelRefresh.addEventListener('transitionend', function(){
+      qpCpanelRefresh.classList.remove('is-spinning');
+    });
+  }
+  qpSegBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      qpSegBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+  if (qpCpanelToggle) {
+    qpCpanelToggle.addEventListener('click', function(){
+      var isOn = qpCpanelToggle.classList.toggle('is-on');
+      qpCpanelToggle.setAttribute('aria-pressed', String(isOn));
+    });
+  }
 
   var playBtn = document.getElementById('playBtn');
   var playing = false;
