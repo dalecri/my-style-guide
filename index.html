@@ -1095,6 +1095,20 @@
 .page-title .dot { color: var(--accent); }
 .title-lede { text-align: center; color: var(--muted); font-size: 15px; margin-top: 10px; }
 header .eyebrow { justify-content: center; }
+
+  .banner-scene {
+    margin: 4px auto 16px; text-align: center; white-space: pre;
+    font-size: 12.5px; line-height: 1.3; user-select: none; color: var(--muted);
+  }
+  .banner-scene .bs-moon { color: var(--accent); }
+  .banner-scene .bs-cat { color: var(--text); }
+  .banner-scene .bs-dock { color: var(--muted); }
+  .banner-scene .bs-water { color: #7FB8D9; }
+  #wave {
+    display: block; margin: 22px auto 2px; max-width: 760px; width: 100%;
+    white-space: pre; overflow: hidden; text-align: center;
+    color: #7FB8D9; opacity: .7; font-size: 12px; line-height: 1.2; user-select: none;
+  }
 </style>
 
 <nav class="toc">
@@ -1146,9 +1160,18 @@ header .eyebrow { justify-content: center; }
 <div class="wrap">
 
   <header>
+    <pre class="banner-scene" aria-hidden="true">   <span class="bs-moon">*</span>         <span class="bs-moon">.-.</span>           <span class="bs-moon">*</span>    
+            <span class="bs-moon">(   )</span>               
+   <span class="bs-moon">*</span>         <span class="bs-moon">'-'</span>          <span class="bs-moon">*</span>     
+                  <span class="bs-cat">/\_/\</span>         
+                 <span class="bs-cat">( o.o )</span>        
+  <span class="bs-dock">===============</span>  <span class="bs-cat">&gt; ^ &lt;</span>  <span class="bs-dock">========</span>
+<span class="bs-water"> ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ </span>
+<span class="bs-water">   ~    ~     ~     ~    ~     ~  </span></pre>
     <div class="eyebrow"><span class="eyebrow-dot"></span>PERSONAL DESIGN SYSTEM — V3, INTERACTIVE</div>
     <h1 class="page-title">Quiet Pixel<span class="dot">.</span></h1>
 <p class="title-lede">Quiet by default. Precious in small doses.</p>
+    <pre id="wave" aria-hidden="true"></pre>
   </header>
 
   <section id="palette">
@@ -2271,5 +2294,30 @@ header .eyebrow { justify-content: center; }
 })();
 </script>
 
+
+<script>
+  // A one-line pond ripple under the header. Decorative only.
+  (function () {
+    var el = document.getElementById('wave');
+    if (!el) return;
+    var W = 72, chars = ' .~\u2248~. ', t = 0;
+    function frame() {
+      var s = '';
+      for (var x = 0; x < W; x++) {
+        var v = Math.sin(x * 0.32 + t) + Math.sin(x * 0.11 - t * 0.7) + Math.sin(x * 0.53 + t * 1.7) * 0.5;
+        var i = Math.max(0, Math.min(chars.length - 1, Math.floor((v + 2.5) / 5 * chars.length)));
+        s += chars[i];
+      }
+      el.textContent = s;
+      t += 0.045;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      frame();
+    } else {
+      frame();
+      setInterval(function () { if (!document.hidden) frame(); }, 90);
+    }
+  })();
+</script>
 </body>
 </html>
