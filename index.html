@@ -122,6 +122,8 @@
   .toc-menu-btn:active { transform: scale(0.94); }
   .toc-menu-btn span { display: block; height: 2px; border-radius: 2px; background: var(--text); transition: transform 0.25s var(--ease), opacity 0.2s var(--ease); }
   .toc-menu-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .toc-menu-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toc-themes { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
   .toc-drawer-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 29;
@@ -198,13 +200,6 @@
   .swatch.pickable.is-accent .swatch-info::after { content: "● applied to page"; font-size: 9px; color: var(--text); display: block; margin-top: 4px; }
 
   /* --- global accent switcher --- */
-  .accent-bar {
-    position: sticky; top: 45px; z-index: 19;
-    background: var(--void); border-bottom: 1px solid var(--line);
-    margin: 0 -20px; padding: 10px 20px;
-    display: flex; align-items: center; gap: 10px; overflow-x: auto;
-    transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
-  }
   .accent-bar-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
   .accent-swatch {
     width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
@@ -1107,6 +1102,13 @@ header .eyebrow { justify-content: center; }
     <span></span><span></span><span></span>
   </button>
   <span class="toc-menu-label">Quiet Pixel — 25 sections</span>
+  <div class="toc-themes" role="group" aria-label="Page theme">
+    <button class="accent-swatch active" data-accent="moon" style="background:#B9A9D9;" title="Moon — dark purple, home base"></button>
+    <button class="accent-swatch" data-accent="lamp" style="background:#E8873A;" title="Lamp — warm dark amber"></button>
+    <button class="accent-swatch" data-accent="dawn" style="background:#7FB8D9;" title="Dawn — pale cool blue"></button>
+    <button class="accent-swatch" data-accent="sun" style="background:#F2C94C;" title="Sun — pale warm ivory"></button>
+    <span class="accent-bar-name" id="accentBarName">Moon</span>
+  </div>
 </nav>
 
 <div class="toc-drawer-backdrop" id="tocBackdrop"></div>
@@ -1140,14 +1142,6 @@ header .eyebrow { justify-content: center; }
   <a href="#dodont">23 · Do / Don't</a>
 </div>
 
-<div class="accent-bar">
-  <span class="accent-bar-label">Try a theme</span>
-  <button class="accent-swatch active" data-accent="moon" style="background:#B9A9D9;" title="Moon — dark purple, home base"></button>
-  <button class="accent-swatch" data-accent="lamp" style="background:#E8873A;" title="Lamp — warm dark amber"></button>
-  <button class="accent-swatch" data-accent="dawn" style="background:#7FB8D9;" title="Dawn — pale cool blue"></button>
-  <button class="accent-swatch" data-accent="sun" style="background:#F2C94C;" title="Sun — pale warm ivory"></button>
-  <span class="accent-bar-name" id="accentBarName">Moon</span>
-</div>
 
 <div class="wrap">
 
